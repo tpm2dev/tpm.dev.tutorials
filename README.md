@@ -1,7 +1,10 @@
-# tutorials
-Tutorials from TPM.dev members
+# TPM.dev tutorials
 
-This repo will hold the tutorial made at TPM.dev by its members and other contributors.
+Tutorials from TPM.dev members and other contributors
+
+## Motivation
+
+To have an easy way of improving existing tutorials and collaborate on creating new ones.
 
 ## Current list of tutorials that will be transfered to GitHub from TPM.dev
 
@@ -15,4 +18,11 @@ This repo will hold the tutorial made at TPM.dev by its members and other contri
 
 ## Licensing
 
-Every author decides how their tutorial will be licensed. When a specific LICENSE file is not added to a folder, the default license is Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
+Every author has the freedom to decide how their tutorial will be licensed by adding a LICENSE file to their tutorial's subfolder.
+
+Otherwise, this work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
+
+[![CC BY-SA 4.0][cc-by-sa-shield]][cc-by-sa]
+
+[cc-by-sa]: http://creativecommons.org/licenses/by-sa/4.0/
+[cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
