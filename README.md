@@ -8,13 +8,20 @@ To have an easy way of improving existing tutorials and collaborate on creating 
 
 ## Current list of tutorials that will be transfered to GitHub from TPM.dev
 
-1. Remote Attestation protocols by Dimi Tomov
-1. Random Number Generator by Ritwik Mandal
-1. Attestation Keys (AK/AIK) by Chris Hawkins
-1. Quick setup for TPM.dev courses
 1. Boot with TPM: Secure vs Measured vs Trusted
+1. Remote Attestation protocols
+1. Random Number Generator
+1. Attestation Keys (AK/AIK)
+1. Quick setup for TPM.dev courses
 1. Localities
 1. Attestation Part 1
+
+## Contributors
+
+* Dimi Tomov
+* Ritwik Mandal
+* Daniel Smith
+* Ian Oliver
 
 ## Licensing
 
