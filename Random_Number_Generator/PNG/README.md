@@ -1,0 +1,1 @@
+Contains screenshots for article
