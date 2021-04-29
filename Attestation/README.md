@@ -46,7 +46,7 @@ key) and then exchanging additional messages by which the client can
 prove its possession of the EK.
 
 Proof of possession of an EK is complicated by the fact that EKs are
-[generally decrypt-only](Decrypt-only-EK.md) (some TPMs also sport
+[generally decrypt-only](Decrypt-only-EK.md) (some TPMs also support
 signing EKs, but the TCG specifications only require decrypt-only EKs).
 The protocol has to have the attestation service send a challenge (or
 key) encrypted to the EKpub and then the attestation client demonstrate

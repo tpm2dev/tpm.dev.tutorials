@@ -6,14 +6,18 @@ Tutorials from [TPM.dev] members and other contributors
 
 To have an easy way of improving existing tutorials and collaborate on creating new ones.
 
-## Current list of tutorials that will be transfered to GitHub from [TPM.dev]
+## Current list of tutorials from [TPM.dev] members
 
+1. Attestation, MakeCredential, ActivateCredential
 1. Boot with TPM: Secure vs Measured vs Trusted
-1. Remote Attestation protocols
 1. Random Number Generator
+
+## List of tutorials that will be transfered to GitHub from [TPM.dev]
+
 1. Attestation Keys (AK/AIK)
-1. Quick setup for TPM.dev courses
 1. Localities
+1. Remote Attestation protocols
+1. Quick setup for TPM.dev courses
 1. Attestation Part 1
 
 ## Contributors
@@ -22,6 +26,7 @@ To have an easy way of improving existing tutorials and collaborate on creating 
 * Ritwik Mandal
 * Daniel Smith
 * Ian Oliver
+* Nicolas Williams
 
 ## Licensing
 
