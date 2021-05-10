@@ -1,0 +1,18 @@
+@startuml
+participant TPM as T
+participant Client as C
+participant Server as S
+participant ServerSimTPM as ST
+title Two-message (one round trip) attestation protocol
+C   ->  C: timestamp = gettimeofday();
+C  -->  T: TPM2_Quote(AK, set-of-all-PCRs, timestamp)
+T  -->  C: quote=Signed_AK({hash-of-PCRs, misc, timestamp})
+C   ->  S: [ID], EKpub, [EKcert], AKpub,\nPCRs, eventlog, timestamp, quote
+S   ->  S: check that timestamp is recent;\ndata = Lookup(EKpub, [EKcert], [ID]);\n[Validate(EKcert)];\ncompute PCRs hash from eventlog and PCRs;\nvalidate quote;\nsession_key = genkey();\nAKcert = CA_Certify(AKpub, data.ID, AKtbscert);\nstuff = Encrypt_session_key({AKcert,\n\t\t\t\t\tdata.for_client})
+S  --> ST: TPM2_MakeCredential(EKpub, AKpub, session_key)
+ST -->  S: credentialBlob, secret
+S   ->  C: credentialBlob, secret, stuff
+C  -->  T: TPM2_ActivateCredential(AKhandle, EKhandle,\n\t\t\t\t\tcredentialBlob, secret)
+T  -->  C: certInfo = session_key
+C   ->  C: {AKcert, secrets} =\n\t\tDecrypt_session_key(stuff);
+@enduml
