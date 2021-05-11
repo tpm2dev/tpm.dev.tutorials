@@ -12,10 +12,10 @@ Why GitHub?
 
 ## Current list of tutorials from [TPM.dev] members
 
-1. Attestation, MakeCredential, ActivateCredential
-1. Boot with TPM: Secure vs Measured vs Trusted
-1. Random Number Generator
-1. TPM Introduction (Work in progress - PR #8)
+1. [Boot with TPM: Secure vs Measured vs Trusted](Boot-with-TPM/tpmboot.md)
+1. [Random Number Generator](Random_Number_Generator/article.md)
+1. [Attestation, MakeCredential, ActivateCredential](Attestation/README.md)
+1. Introduction to TPM Concepts (Work in progress - PR #8)
 
 ## List of tutorials that will be transfered to GitHub from [TPM.dev]
 
