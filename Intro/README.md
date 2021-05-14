@@ -90,6 +90,18 @@ Hash extension makes "message" boundaries strong.
 Hash extension is most of what a PCR is, but hash extension is in other
 TPM concepts besides PCRs, such as policy naming.
 
+## Coping with Severe Resource Limits Using Digests and Hash Extension
+
+Hardware TPMs are extremely limited in memory and non-volatile memory
+capacity.  As a result they cannot hold large entities.
+
+A common theme in TPMs is the use of digests, and hash extension digests
+in particular, as a stand-in for large entities that cannot exist at
+once on the TPM.
+
+We'll discuss at least two such large entities: event logs, and
+policies.
+
 ## Platform Configuration Registers (PCRs)
 
 A PCR, then, is just a hash extension output.  The only operations on
@@ -111,11 +123,8 @@ one must know the meaning of each such value.
 Any TPM-using platform has to provide a way to keep a log of PCR hash
 extension values.  Such a log is known as the "eventlog".
 
-The TPM itself cannot hold this log for the TPM is resource-constrained.
-
-Indeed, hash extension is used by TPMs as a sort of a compression
-function that represents a larger state that may not fit on the TPM.
-PCRs are one case, and authorization policies are another.
+The TPM itself cannot hold this log -- the TPM is too
+resource-constrained.
 
 ## Root of Trust Measurements (RTM)
 
@@ -173,7 +182,7 @@ allow execution of arbitrary code at some point (e.g., download and
 execute) and to not extend PCRs accordingly, in which case the execution
 of untrusted code will not be reflected in any RTM.
 
-## Object Naming
+## Cryptographic Object Naming
 
 TPMs support a variety of types of objects.  Objects generally have
 pointer-like "handles" that they are often used in the TPM APIs.  But
@@ -246,6 +255,8 @@ trees of keys below the primary key:
                 ...
 ```
 
+Note that every key has a parent or is a primary key.
+
 There are three built-in hierarchies:
 
  - platform hierarchy
@@ -263,23 +274,29 @@ used to authenticate the TPM's legitimacy.  The EK's public key
 ("EKpub") can be used to uniquely identify a TPM, and possibly link to
 the platform's, and even the platform's user(s)' identities.
 
-## Key Wrapping and Resource Management
+## Key Wrapping
 
 The primary key is always a decrypt-only asymmetric private key, and its
 corresponding public key is therefore encrypt-only.  This is largely
-because of key wrapping, where a secret or private key is encrypted to a
-TPM's EKpub so that it can be safely sent to that TPM so that that TPM
+because of _key wrapping_, where a secret or private key is encrypted to
+a TPM's EKpub so that it can be safely sent to that TPM so that that TPM
 can then decrypt and use that secret.
+
+## Saving Resources Off-TPM
 
 As well as wrapping secrets by encryption to public keys, TPMs also use
 wrapping in a symmetric key known only to the TPM for the purpose of
-saving keys off the TPM.  This is used for resource management: since
-hardware TPMs have very limited resources, objects need to created or
-loaded, used, then saved off-TPM to make room for other objects to be
-loaded (unless they are not to be used again, then saving them is
-pointless).  Only a TPM that saved an object can load it again, but some
-objects can be exported to other TPMs by encrypting them to their
-destination TPMs' EKpubs.
+saving keys off the TPM.
+
+This is used for resource management: since hardware TPMs have very
+limited resources, objects need to created or loaded, used, then saved
+off-TPM to make room for other objects to be loaded (unless they are not
+to be used again, then saving them is pointless).  Only a TPM that saved
+an object can load it again, but some objects can be exported to other
+TPMs by encrypting them to their destination TPMs' EKpubs.
+
+With a resource manager and access broker, a TPM can appear to have
+infinite resources.
 
 ### Controlling Exportability of Keys
 
@@ -355,14 +372,16 @@ always "compressed" to a hash digest.
 
 It is the responsibility of the application that will attempt to use a
 policy-protected resource to know what the policy's definition is and
-restate it to the TPM when it goes to make use of that resource.  Thus,
-and because policies are `O(1)` in storage size, they can be arbitrarily
-more complex than a TPM's limited resources would otherwise allow.
+restate it to the TPM when it goes to make use of that resource.  The
+TPM will evaluate the policy and, at the end, check that its digest
+matches that of the policy-protected resource.  Thus, and because policy
+digests are small and fixed-sized, they can be arbitrarily more complex
+than a TPM's limited resources would otherwise allow.
 
 All the policy commands that are to be evaluated successfully to grant
 access have to be known to the entity that wants that access.  Of
 course, that entity will have to satisfy -at access time- the conditions
-expressed by the relevant policy.  The application has to know the
+expressed by the relevant policy.  And that entity has to know the
 policy because the TPM knows only a digest of it.
 
 ### Policy Construction
@@ -409,12 +428,11 @@ With all these features, and with all the flexibility allowed by NV
 indexes, policies can be used to:
 
  - require that N-of-M users authenticate
- - enforce bank vault-like time of day restrictions
  - require multi-factor authentication (password, biometric, smartcard)
- - check revocation
- - check system RTM state
- - distinguish user roles (admin roles get access to some resources,
-   user roles get access to other resources)
+ - enforce bank vault-like time of day restrictions
+ - check revocation (using NV index bit-field objects)
+ - check system RTM state (PCRs)
+ - distinguish user roles
 
 ## Sessions
 
@@ -429,9 +447,9 @@ Cryptographic keys can either be unrestricted or restricted.
 
 An unrestricted signing key can be used to sign arbitrary content.
 
-A restricted signing key can be used to sign only content that begins
-with a magic byte sequence, and which the TPM allows only to be used in
-certain operations.
+A restricted signing key can be used to sign only TPM-generated content
+as part of specific TPM restricted signing commands.  Such content
+always begins with a magic byte sequence.
 
 A restricted decryption key can only be used to decrypt ciphertexts
 whose plaintexts have a certain structure.  In particular these are used
@@ -440,10 +458,16 @@ TPM-using application to get the plaintext if and only if (IFF) the
 plaintext cryptographically names an object that the application has
 access to.  This is used to communicate secrets ("credentials") to TPMs.
 
+There is also a notion of signing keys that can only be used to sign
+PKIX certificates.
+
 ## Attestation
 
 Attestation is the process of demonstrating that a system's current
 state is "trusted", or the truthfulness of some set of assertions.
+
+Often a system gets something in exchange for attesting to its current
+state.  E.g., keys for unlocking filesystems, or device credentials.
 
 As you can see in our [tutorial on attestation](Attestation/README.md),
 many TPM concepts can be used to great effect:
