@@ -2,7 +2,7 @@
 
 Trusted Platform Modules (TPMs) are a large and complex topic, made all
 the more difficult to explain by the intricate relationships between the
-relevant concepts.  This is an attempt at a simple explanation --
+relevant concepts.  This is an attempt at a simple explanation -- much
 simpler than reading hundreds of pages of documents, but then too, too
 light on detail to be immediately useful.
 
@@ -15,8 +15,7 @@ it with rich authentication and authorization policies.
 Typically a TPM is a hardware module, a chip, though there are firmware,
 virtual, and simulated TPMs as well, all implemented in software.
 
-To simplify things we'll consider only TPM 2.0.  Also to simplify things
-we'll ignore algorithm agility.
+To simplify things we'll consider only TPM 2.0.
 
 Other parts of this [tutorial](README.md) may cover specific concepts in
 much more detail.
@@ -33,19 +32,16 @@ here):
  - immutability of object public areas
  - key hierarchies
  - key wrapping
+ - restricted cryptographic keys
  - limited resources
-    - tickets
-    - resource management
- - sessions
- - authorization
-    - restricted cryptographic keys
-    - policies
- - other object types
-    - non-volatile (NV) indexes
+ - sessions and authorization
+ - other object types, mainly non-volatile (NV) indexes
  - attestation
 
-We'll assume reader familiarity with cryptography so we need not explain
-it.
+We'll assume reader familiarity with the basics of cryptography -- the
+basics of cryptographic primitives as interfaces, but not their
+internals.  E.g., hash functions, symmetric encryption, asymmetric
+encryption, and digital signatures.
 
 Authorization is the most important aspect of a TPM, since that's
 ultimately what it exists for: to authorize a system or application to
@@ -138,7 +134,7 @@ the code that is installed on the system.
 
 RTM can be used to ensure that only known-trusted code is executed, and
 that important resources are not unlocked unless the state of the system
-when they are needed is "only executed trusted code".
+when they are needed is "has only executed trusted code to get here".
 
 Note that some PCRs are left to be used by "applications".
 
@@ -167,7 +163,7 @@ the eventlog is very dry, but it can still be used to evaluate whether
 the current PCR values represent a trusted state.  For example, one
 might have a database of known-good and known-bad firmware/ROM digests,
 then one can check that only known-good ones appear in the eventlog and
-that reproducing the hash extensions described by the eventlot produces
+that reproducing the hash extensions described by the eventlog produces
 the same PCR values as one can read, and if so it follows that the
 system has only executed trusted code.
 
@@ -206,7 +202,7 @@ to defeat active attacks.
 Because the name of an object is a digest of its public area, the public
 area cannot be changed after creating it.  One can delete and then
 recreate an object in order to "change" its public area, but this
-necessarily yields a new name (assuming no digest collisions).
+necessarily yields a new name.
 
 ### Cryptographic Object Naming as a Binding
 
@@ -271,9 +267,9 @@ the platform's, and even the platform's user(s)' identities.
 
 The primary key is always a decrypt-only asymmetric private key, and its
 corresponding public key is therefore encrypt-only.  This is largely
-because of key wrapping, where a symmetric key or asymmetric private key
-is encrypted to a TPM's EKpub so that it can be safely sent to that TPM
-so that that TPM can then decrypt and use that secret.
+because of key wrapping, where a secret or private key is encrypted to a
+TPM's EKpub so that it can be safely sent to that TPM so that that TPM
+can then decrypt and use that secret.
 
 As well as wrapping secrets by encryption to public keys, TPMs also use
 wrapping in a symmetric key known only to the TPM for the purpose of
@@ -290,9 +286,13 @@ destination TPMs' EKpubs.
 A key that is `fixedTPM` cannot leave the TPM in cleartext.  It can be
 saved off the TPM it resides in, but only that TPM can load it again.
 
-A key that is `fixedParent` cannot be re-parented, though if its parent
-is neither `fixedParent` nor `fixedTPM` then the parent and its
+A key that is `fixedParent` cannot be moved from one part of a key
+hierarchy to another -- it cannot be "re-parented".  Though if its
+parent is neither `fixedParent` nor `fixedTPM` then the parent and its
 descendants can be moved as a group to some other TPM.
+
+> Key hierarchies are an important TPM topic that we're not really
+> addresing in this intro.
 
 ## Persistence
 
@@ -300,9 +300,13 @@ Cryptographic keys are, by default, not stored on non-volatile memory.
 Hardware TPMs have very little non-volatile (NV) memory.  They also have
 very limited volatile memory as well.
 
-PCRs always exist, but they get reset on restart.
+Keys can be moved to NV storage, to a point.
 
-Keys can be moved to NV storage.
+Keys can also be persisted off-TPM by saving them (see above).  For this
+the TPM will encrypt the exported key in a symmetric secret key that
+only the TPM knows, and only the same TPM can reload it.
+
+PCRs always exist, but they get reset on restart.
 
 ## Non-Volatile (NV) Indexes
 
@@ -454,3 +458,16 @@ many TPM concepts can be used to great effect:
  - authorization of devices onto a network
  - etc.
 
+# Other Resources
+
+Nokia has a [TPM course](https://github.com/nokia/TPMCourse/tree/master/docs).
+
+The TCG has a number of members-only tutorials, but it seems that it is
+possible to be invited to be a non-fee paying member.
+
+Core TCG TPM specs:
+
+ - [TCG TPM 2.0 Library part 1: Architecture](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf).
+ - [TCG TPM 2.0 Library part 2: Structures](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part2_Structures_pub.pdf).
+ - [TCG TPM 2.0 Library part 3: Commands, section 12](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part3_Commands_pub.pdf).
+ - [TCG TPM 2.0 Library part 3: Commands Code, section 12](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part3_Commands_code_pub.pdf).
