@@ -27,6 +27,7 @@ here):
 
  - cryptography
  - hash extension
+ - tickets
  - cryptographic object naming
  - platform configuration registers (PCRs)
  - immutability of object public areas
@@ -186,6 +187,36 @@ allow execution of arbitrary code at some point (e.g., download and
 execute) and to not extend PCRs accordingly, in which case the execution
 of untrusted code will not be reflected in any RTM.
 
+## Tickets
+
+> Tickets are yet another device for coping with TPMs having limited
+> resources.  Interaction with TPMs is via request/response
+> commands.
+
+To avoid having to re-perform various operations -or remember having
+performed them- between command invocations, a TPM can produce a
+"ticket" that consists of an HMAC over a TPM-generated assertion, keyed
+by a key known only to the TPM, and return it to the caller who can then
+present it in a subsequent command related to the first.
+
+For example, when signing data the TPM will first digest the data to
+sign over several commands and generate a ticket saying it did produce
+that digest, then later it can sign the digest after validating the
+ticket that it produced.
+
+Another example is a policy ticket, which allows one to avoid having to
+re-authenticate (e.g., with smartcard, biometrics, passwords) on every
+command for small window of time.
+
+> When would a user be authenticated?  Well, typically at boot time, or
+> maybe at wake from sleep/hibernate time.  A laptop could be configured
+> to require a user to authenticate with biometrics and possibly a
+> password or a smartcard.
+
+> There are five types of tickets.  We won't cover them here.  Readers
+> who end up needing to know about them can look at section 11.4.6.3 of
+> `TCG TPM 2.0 Library, part 1: Architecture`.
+
 ## Cryptographic Object Naming
 
 TPMs support a variety of types of objects.  Objects generally have
@@ -239,9 +270,8 @@ cut-and-paste attack in attestation protocols.
 
 ## Key Hierarchies
 
-TPMs have multiple key hierarchies, all rooted in a primary decrypt-only
-asymmetric private key derived from a seed, with arbitrarily complex
-trees of keys below the primary key:
+TPMs have multiple key hierarchies, each with zero, one or more primary
+keys, each with zero, one, or more children keys:
 
 ```
                 seed
@@ -259,14 +289,14 @@ trees of keys below the primary key:
                 ...
 ```
 
-Note that every key has a parent or is a primary key, and every key can
-have zero, one, or more children.
+Note that every key has a parent or is a primary key.
 
-There are three built-in hierarchies:
+There are four built-in hierarchies:
 
  - platform hierarchy
  - endorsement hierarchy
  - storage hierarchy
+ - null hierarchy
 
 of which only the endorsement and storage hierarchies will be of
 interest to most readers.
@@ -279,15 +309,13 @@ used to authenticate the TPM's legitimacy.  The EK's public key
 ("EKpub") can be used to uniquely identify a TPM, and possibly link to
 the platform's, and even the platform's user(s)' identities.
 
-## Key Wrapping
+## Key Wrapping and Resource Management
 
-The primary key is generally a decrypt-only asymmetric private key, and
-its corresponding public key is therefore encrypt-only.  This is largely
-because of _key wrapping_, where a secret or private key is encrypted to
-a TPM's EKpub so that it can be safely sent to that TPM so that that TPM
-can then decrypt and use that secret.
+Key wrapping is encrypting a secret or private key (key encryotion key,
+or KEK) such that a specific entity may recover the plain key.
 
-## Saving Resources Off-TPM
+A decrypt-only asymmetric private key can be used to encrypt secrets to
+the TPM on which that private key resides.
 
 As well as wrapping secrets by encryption to public keys, TPMs also use
 wrapping in a symmetric key known only to the TPM for the purpose of
@@ -318,17 +346,23 @@ descendants can be moved as a group to some other TPM.
 
 ## Persistence
 
-Cryptographic keys are, by default, not stored on non-volatile memory.
-Hardware TPMs have very little non-volatile (NV) memory.  They also have
-very limited volatile memory as well.
+In a TPM, key objects are, by default, transient, meaning the TPM will
+forget them if restarted.  Still, they can be saved (encrypted in a
+secret key only the TPM knows) and later reloaded.
 
-Keys can be moved to NV storage, to a point.
+Transient objects can be made persistent, but because hardware TPMs have
+very little non-volatile memory, few keys should be made persistent.
+Instead you can save them (wrapped to a TPM-only KEK) and reload them as
+needed.
 
-Keys can also be persisted off-TPM by saving them (see above).  For this
-the TPM will encrypt the exported key in a symmetric secret key that
-only the TPM knows, and only the same TPM can reload it.
+Because primary keys (for any hierarchy other than the null hierarchy)
+are derived deterministically from a built-in and protected seed, and
+from a template, they are persistent even when not moved to NV storage
+and even when not saved.
 
-PCRs always exist, but they get reset on restart.
+PCRs always persist, but they get reset on restart.
+
+NV indexes always persist.
 
 ## Non-Volatile (NV) Indexes
 
@@ -454,8 +488,9 @@ An unrestricted signing key can be used to sign arbitrary content.
 
 A restricted signing key can be used to sign only TPM-generated content
 as part of specific TPM restricted signing commands.  Such content
-always begins with a magic byte sequence, and the TPM refuses to sign
-externally generated content that starts with that magic byte sequence.
+always begins with a magic byte sequence.  Conversely, the TPM refuses
+to sign externally generated content that starts with that magic byte
+sequence.
 
 A restricted decryption key can only be used to decrypt ciphertexts
 whose plaintexts have a certain structure.  In particular these are used
