@@ -23,16 +23,13 @@ much more detail.
 
 # Core Concepts
 
-Some core concepts in the world of TPMs
+Some core concepts in the world of TPMs (not all of which we'll discuss
+here):
 
- - cryptography:
-    - digest functions
-    - hash extension
-    - HMAC
-    - symmetric encryption
-    - asymmetric encryption and/or signature algorithms
- - platform configuration registers (PCRs)
+ - cryptography
+ - hash extension
  - cryptographic object naming
+ - platform configuration registers (PCRs)
  - immutability of object public areas
  - key hierarchies
  - key wrapping
@@ -62,49 +59,6 @@ other access.
 Where to start?  Let's start with hash extension, which may be the only
 trivial concept in the world of TPMs!
 
-## Important Notes
-
- - Chained implications.
-
-   It is important to note the TPM ecosystem's critical dependence on
-   TPMs performing authorization as specified.  A lot can be
-   accomplished by chaining cryptographic implications.  Sending a
-   secret to a TPM-using application, with the secret encrypted in that
-   TPM's primary endorsement public key is safe when one knows that
-   public key truly is a legitimate hardware TPM's public key: the TPM
-   will not release the secret to the application unless the recipient
-   has some access specified by the sender.  Complex chains of events
-   can be secure provided one knows that it involves legitimate hardware
-   TPMs that otherwise could not be secured.  Therefore the legitimacy
-   of a TPM that one communicates with is essential.
-
- - Limited resources.
-
-   Hardware TPMs are very resource-starved.  The set of commands defined
-   by the TCG TPM specifications is specifically constructed to a) be
-   small and simple (simple-enough anyways), yet b) enable rich
-   semantics in spite of this.
-
-   These limited resources mean, among other things, that TPMs don't do
-   complex things like PKIX certificate validation path construction, or
-   even PKIX certificate path validation, nor do they implement complex
-   authentication protocols using PKIX, nor Kerberos, nor even simple
-   protocols like JWT.  Hardware TPMs can be used to implement portions
-   of such complex protocols (e.g., certificate issuance), but they
-   cannot implement the entirety of such protocols.
-
- - Hardware TPMs are _slow_.
-
- - A *lot* of detail is left out here.  Nothing is said about how TPMs
-   interface with the system or applications.  Little is said about
-   specific commands, and nothing is said about most commands.  Nothing
-   is said about TPM software stacks or APIs.
-
-   Our goal is only to help the lay reader understand TPMs well enough
-   at the conceptual level that they will be more comfortable
-   approaching mure more detailed TPM-related tutorials, documents,
-   books, or TCG specifications.
-
 ## Hash Extension
 
 Hash extension is just appending some data to a current digest-sized
@@ -130,19 +84,42 @@ value, hashing that, and then calling the output the new current value:
 
 where `H()` is a cryptographic hash function.
 
+Each extension value can be arbitrarily large, and the TPM will use the
+traditional `Init`/`Update`/`Final` approach to making digest
+computation online.
+
+Note that `H(e0 || e1 || e2) != Extend(Extend(Extend(0, e0), e1), e2)`.
+Hash extension makes "message" boundaries strong.
+
 Hash extension is most of what a PCR is, but hash extension is in other
 TPM concepts besides PCRs, such as policy naming.
 
 ## Platform Configuration Registers (PCRs)
 
-A PCR, then, is just a hash output.  The only operations on PCRs are:
-read, extend, and reset.  All richness of semantics of PCRs come from
-how they are used:
+A PCR, then, is just a hash extension output.  The only operations on
+PCRs are: read, extend, and reset.  All richness of semantics of PCRs
+come from how they are used:
 
  - how they are extended and by what code
  - what purposes they are read for
     - attestation
     - authorization
+
+Note that a PCR value by itself is devoid of meaning.  To add meaning
+one must have access to the list of discrete values extended into the
+PCR, as well as the order in which they were extended into the PCR.  And
+one must know the meaning of each such value.
+
+### Eventlogs
+
+Any TPM-using platform has to provide a way to keep a log of PCR hash
+extension values.  Such a log is known as the "eventlog".
+
+The TPM itself cannot hold this log for the TPM is resource-constrained.
+
+Indeed, hash extension is used by TPMs as a sort of a compression
+function that represents a larger state that may not fit on the TPM.
+PCRs are one case, and authorization policies are another.
 
 ## Root of Trust Measurements (RTM)
 
@@ -154,9 +131,10 @@ ideally, perform RTMs.  At the end of the boot process some set of PCRs
 should reflect the totality of the code path taken to complete booting.
 
 Some PCRs are used to measure the BIOS, others to measure option ROMs,
-and others to measure the operating system.  In principle one could
-measure the entirety of an operating system and all the code that is
-installed on the system.
+and others to measure the operating system.  Each platform has a
+specification for which PCRs are used or reserved for what purposes.  In
+principle one could measure the entirety of an operating system and all
+the code that is installed on the system.
 
 RTM can be used to ensure that only known-trusted code is executed, and
 that important resources are not unlocked unless the state of the system
@@ -179,7 +157,9 @@ to unlock (unseal) the object.
 
 On the "PC platform" (which includes x64 servers) the BIOS keeps a log
 of all the PCR extensions it has performed.  The OS should keep its own
-log of extensions it performs.
+log of extensions it performs of PCRs reserved to the OS.  Each
+application has to keep a log of the extensions of the PCRs allocated to
+it.  Again, the TPM itself cannot do this.
 
 The eventlog documents how the PCRs evolved to their current state,
 whatever it might be.  Since PCR extension values are typically digests,
@@ -227,6 +207,26 @@ Because the name of an object is a digest of its public area, the public
 area cannot be changed after creating it.  One can delete and then
 recreate an object in order to "change" its public area, but this
 necessarily yields a new name (assuming no digest collisions).
+
+### Cryptographic Object Naming as a Binding
+
+> This section comes too soon, since it relates to attestation and
+> restricted keys.  Still, it may be useful to illustrate cryptographic
+> object naming with one particularly important use of it.
+
+A pair of functions, `TPM2_MakeCredential()` and
+`TPM2_ActivateCredential()`, illustrate the use of cryptographic object
+naming as a binding or a sort of authorization function.
+
+`TPM2_MakeCredential()` can be used to encrypt a datum (a "credential")
+to a target TPM such that the target will _only be willing to decrypt
+it_ if *and only if* the application calling `TPM2_ActivateCredential()`
+to decrypt that credential has access to some key named by the sender,
+and that name is a cryptographic name that the sender can and must
+compute for itself.
+
+The semantics of these two functions can be used to defeat a
+cut-and-paste attack in attestation protocols.
 
 ## Key Hierarchies
 
@@ -447,7 +447,8 @@ many TPM concepts can be used to great effect:
  - using PCRs to attest to system state
  - using policies and sealed-to-PCRs objects to attest to authentication
    events on the system
- - using restricted keys to authenticate a TPM and bind it to its host
+ - using restricted keys and cryptographic object naming to authenticate
+   a TPM and bind it to its host
  - delivering key material to authenticated systems via their TPMs
  - unlocking resources following successful attestation
  - authorization of devices onto a network
