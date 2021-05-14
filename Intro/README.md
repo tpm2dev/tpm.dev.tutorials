@@ -52,8 +52,7 @@ TPMs have a very rich set of options for authorization.  It's not just
 restricted keys to allow access only to applications that also have
 other access.
 
-Where to start?  Let's start with hash extension, which may be the only
-trivial concept in the world of TPMs!
+Where to start?  Let's start with hash extension.
 
 ## Hash Extension
 
@@ -282,8 +281,8 @@ the platform's, and even the platform's user(s)' identities.
 
 ## Key Wrapping
 
-The primary key is always a decrypt-only asymmetric private key, and its
-corresponding public key is therefore encrypt-only.  This is largely
+The primary key is generally a decrypt-only asymmetric private key, and
+its corresponding public key is therefore encrypt-only.  This is largely
 because of _key wrapping_, where a secret or private key is encrypted to
 a TPM's EKpub so that it can be safely sent to that TPM so that that TPM
 can then decrypt and use that secret.
@@ -455,7 +454,8 @@ An unrestricted signing key can be used to sign arbitrary content.
 
 A restricted signing key can be used to sign only TPM-generated content
 as part of specific TPM restricted signing commands.  Such content
-always begins with a magic byte sequence.
+always begins with a magic byte sequence, and the TPM refuses to sign
+externally generated content that starts with that magic byte sequence.
 
 A restricted decryption key can only be used to decrypt ciphertexts
 whose plaintexts have a certain structure.  In particular these are used
