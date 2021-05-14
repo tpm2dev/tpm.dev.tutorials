@@ -99,8 +99,13 @@ A common theme in TPMs is the use of digests, and hash extension digests
 in particular, as a stand-in for large entities that cannot exist at
 once on the TPM.
 
-We'll discuss at least two such large entities: event logs, and
-policies.
+TPMs use digests as stand-ins for large entities of various types:
+
+ - eventlogs
+ - policies
+ - auditing
+
+We'll discuss at least two of those: event logs, and policies.
 
 ## Platform Configuration Registers (PCRs)
 
@@ -255,7 +260,8 @@ trees of keys below the primary key:
                 ...
 ```
 
-Note that every key has a parent or is a primary key.
+Note that every key has a parent or is a primary key, and every key can
+have zero, one, or more children.
 
 There are three built-in hierarchies:
 
