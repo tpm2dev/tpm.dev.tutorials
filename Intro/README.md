@@ -27,7 +27,6 @@ here):
 
  - cryptography
  - hash extension
- - tickets
  - cryptographic object naming
  - platform configuration registers (PCRs)
  - immutability of object public areas
@@ -191,7 +190,8 @@ of untrusted code will not be reflected in any RTM.
 
 > Tickets are yet another device for coping with TPMs having limited
 > resources.  Interaction with TPMs is via request/response
-> commands.
+> commands, and tickets are largely about making TPMs stateless between
+> related commands.
 
 To avoid having to re-perform various operations -or remember having
 performed them- between command invocations, a TPM can produce a
