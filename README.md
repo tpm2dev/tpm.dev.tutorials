@@ -4,17 +4,21 @@ Tutorials from [TPM.dev] members and other contributors
 
 ## Motivation
 
-To have an easy way of improving existing tutorials and collaborate on creating new ones.
+To share developer-friendly resources about Trusted Platform Modules(TPM) and hardware security, including other Hardware Security Modules(HSM).
+
+Why GitHub?
+- To have an easy way of improving existing [TPM.dev] tutorials
+- To collaborate on creating new ones
 
 ## Current list of tutorials from [TPM.dev] members
 
 1. Attestation, MakeCredential, ActivateCredential
 1. Boot with TPM: Secure vs Measured vs Trusted
 1. Random Number Generator
+1. TPM Introduction (Work in progress - PR #8)
 
 ## List of tutorials that will be transfered to GitHub from [TPM.dev]
 
-1. Attestation Keys (AK/AIK)
 1. Localities
 1. Remote Attestation protocols
 1. Quick setup for TPM.dev courses
@@ -26,7 +30,10 @@ To have an easy way of improving existing tutorials and collaborate on creating 
 * Ritwik Mandal
 * Daniel Smith
 * Ian Oliver
-* Nicolas Williams
+* Nico Williams
+* Ken Goldman
+* Trammell Hudson
+* Jason Heiss
 
 ## Licensing
 
