@@ -12,6 +12,9 @@ of system state, unlocking of local resources that are kept encrypted
 (e.g., filesystems), and more.  A TPM can do those things, and it can do
 it with rich authentication and authorization policies.
 
+> The standards development organization that publishes TPM specifications
+> is the [Trusted Computing Group (TCG)](https://trustedcomputinggroup.org).
+
 Typically a TPM is a hardware module, a chip, though there are firmware,
 virtual, and simulated TPMs as well, all implemented in software.
 
@@ -20,10 +23,41 @@ To simplify things we'll consider only TPM 2.0.
 Other parts of this [tutorial](README.md) may cover specific concepts in
 much more detail.
 
+# Goals
+
+The goal of this introductory material is to help readers new to TPMs to
+understand them well enough to approach the subjects of:
+
+ - [attestation](/Attestation/README.md)
+ - [secure boot](/Boot-with-TPM/README.md)
+
+and to think about the sorts of things that one can do with TPMs in
+general, which include:
+
+ - device on-boarding
+ - ascertaining the state of a device (e.g., has it executed only
+   trusted code)
+ - unlocking of devices using TPM-based authentication and authorization
+   policies (e.g., unlocking a laptop on boot multiple factors such as
+   biometrics, smartcards, passwords, time of day, even interaction with
+   remote services)
+ - using a TPM as a source of entropy for a running OS
+
+> NOTE: At this time this introduction is very much a layman's
+> introduction, and only an introduction.  Readers seeking to do
+> software development using TPMs will want to make use of [TCG
+> specifications and other resources](#Other-Resources).
+
+## Glossary
+
+> For a glossary, see section 4 of [TCG TPM 2.0 Library part 1:
+> Architecture](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf).
+
 # Core Concepts
 
-Some core concepts in the world of TPMs (not all of which we'll discuss
-here):
+Some core concepts in the world of TPMs:
+
+> NOTE: We will not cover all of these here.
 
  - cryptography
  - hash extension
@@ -86,8 +120,8 @@ computation online.
 Note that `H(e0 || e1 || e2) != Extend(Extend(Extend(0, e0), e1), e2)`.
 Hash extension makes "message" boundaries strong.
 
-Hash extension is most of what a PCR is, but hash extension is in other
-TPM concepts besides PCRs, such as policy naming.
+Hash extension is most of what a PCR is, but hash extension is used in
+other TPM concepts besides PCRs, such as policy naming.
 
 ## Coping with Severe Resource Limits Using Digests and Hash Extension
 
@@ -95,7 +129,7 @@ Hardware TPMs are extremely limited in memory and non-volatile memory
 capacity.  As a result they cannot hold large entities.
 
 A common theme in TPMs is the use of digests, and hash extension digests
-in particular, as a stand-in for large entities that cannot exist at
+in particular, as a stand-in for large entities that might not fit at
 once on the TPM.
 
 TPMs use digests as stand-ins for large entities of various types:
@@ -112,7 +146,8 @@ A PCR, then, is just a hash extension output.  The only operations on
 PCRs are: read, extend, and reset.  All richness of semantics of PCRs
 come from how they are used:
 
- - how they are extended and by what code
+ - what the governing TCG platform specification says about them
+ - what they are extended with and by what code (in what locality)
  - what purposes they are read for
     - attestation
     - authorization
@@ -170,7 +205,7 @@ log of extensions it performs of PCRs reserved to the OS.  Each
 application has to keep a log of the extensions of the PCRs allocated to
 it.  Again, the TPM itself cannot do this.
 
-The eventlog documents how the PCRs evolved to their current state,
+The eventlog documents how each PCR evolved to their current state,
 whatever it might be.  Since PCR extension values are typically digests,
 the eventlog is very dry, but it can still be used to evaluate whether
 the current PCR values represent a trusted state.  For example, one
@@ -178,7 +213,8 @@ might have a database of known-good and known-bad firmware/ROM digests,
 then one can check that only known-good ones appear in the eventlog and
 that reproducing the hash extensions described by the eventlog produces
 the same PCR values as one can read, and if so it follows that the
-system has only executed trusted code.
+system has only executed trusted code to arrive at the state identified
+by the PCRs.
 
 Note though that PCRs and RTM are not enough on their own to keep a
 system from executing untrusted code.  A system can be configured to
@@ -211,7 +247,8 @@ command for small window of time.
 > When would a user be authenticated?  Well, typically at boot time, or
 > maybe at wake from sleep/hibernate time.  A laptop could be configured
 > to require a user to authenticate with biometrics and possibly a
-> password or a smartcard.
+> password or a smartcard.  Note that such policies are not required by
+> the specifications, but rather something that one can choose to use.
 
 > There are five types of tickets.  We won't cover them here.  Readers
 > who end up needing to know about them can look at section 11.4.6.3 of
@@ -368,12 +405,18 @@ NV indexes always persist.
 
 TPMs also have a special kind of non-volatile object: NV indexes.
 
+> NOTE: NV indexes are not "objects" in the sense that the TCG's
+> specifications mean.  TCG's definition of "object" is
+>
+> > key or  data that  has  a public  portion  and, optionally, a
+> > sensitive  portion;  and which is  a  member of a hierarchy
+
 NV indexes come in multiple flavors for various uses:
 
  - store public data (e.g., an NV index is used to store the EKcert)
  - emulate PCRs
  - monotonic counters
- - fields of write-once bits (for, e.g., revocation)
+ - fields of write-once bits (bitfields) (for, e.g., revocation)
  - ...
 
 NV indexes can be used standalone, and/or in connection with policies,
@@ -442,8 +485,8 @@ allowed, otherwise it is not.
 ### Indirect Policies
 
 Because an object's policy is part of its name, that policy cannot be
-changed after creation.  An indirect policy command allows for the
-inclusion of a policy stored in an NV index.
+changed after creation.  An indirect policy command allows for a policy
+to change over time without having to recreate the authorized object.
 
 ### Compound Policies
 
@@ -510,7 +553,7 @@ state is "trusted", or the truthfulness of some set of assertions.
 Often a system gets something in exchange for attesting to its current
 state.  E.g., keys for unlocking filesystems, or device credentials.
 
-As you can see in our [tutorial on attestation](Attestation/README.md),
+As you can see in our [tutorial on attestation](/Attestation/README.md),
 many TPM concepts can be used to great effect:
 
  - using PCRs to attest to system state
@@ -524,6 +567,9 @@ many TPM concepts can be used to great effect:
  - etc.
 
 # Other Resources
+
+[A Practical Guide to TPM 2.0](https://trustedcomputinggroup.org/resource/a-practical-guide-to-tpm-2-0/)
+is an excellent book that informed much of this tutorial.
 
 Nokia has a [TPM course](https://github.com/nokia/TPMCourse/tree/master/docs).
 
