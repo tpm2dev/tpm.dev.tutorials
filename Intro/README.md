@@ -346,6 +346,11 @@ used to authenticate the TPM's legitimacy.  The EK's public key
 ("EKpub") can be used to uniquely identify a TPM, and possibly link to
 the platform's, and even the platform's user(s)' identities.
 
+The `TPM2_CreatePrimary()` and `TPM2_CreateLoaded()` commands create key
+objects deterministically from the hierarchy's seed and the "template"
+used to create the key (which includes a "unique" area that provides
+"entropy" to the key derivation function).
+
 ## Key Wrapping and Resource Management
 
 Key wrapping is encrypting a secret or private key (key encryotion key,
@@ -395,11 +400,17 @@ needed.
 Because primary keys (for any hierarchy other than the null hierarchy)
 are derived deterministically from a built-in and protected seed, and
 from a template, they are persistent even when not moved to NV storage
-and even when not saved.
+and even when not saved as long as the hierarchy's seed is not reset.
+
+(Resetting the endorsement hierarchy seed is a very dramatic action, as
+it changes the EK/EKpub and renders any provisioned EKcert useless.
+Resetting the storage hierarchy seed is much less dramatic.  The NULL
+hierarchy is reset every time the TPM resets.)
 
 PCRs always persist, but they get reset on restart.
 
-NV indexes always persist.
+NV indexes always persist.  (But in disorderly resets/shutdowns a
+hybrid NV index may not be sync'ed to NV.)
 
 ## Non-Volatile (NV) Indexes
 
