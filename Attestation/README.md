@@ -667,7 +667,7 @@ key-encryption-keys to a client.  But one might not want to store those
 keys in the clear on the attestation server.  As well, one might want a
 break-glass way to recover those secrets.
 
-For break-glass recover, the simplest thing to do is to store
+For break-glass recovery, the simplest thing to do is to store
 `Encrypt_backupKey({EKpub, hostname, secrets})`, where `backupKey` is an
 asymmetric key whose private key is stored offline (e.g., in a safe, or
 in an offline HSM).  To break the glass and recover the key, just bring
@@ -682,17 +682,27 @@ successful attestation:
  - Store `TPM2_MakeCredential(EKpub, someObjectName, key0), Encrypt_key0(secrets)`.
 
    In this mode the server sends the client the stored data, then client
-   gets to recreate `someObject` (possibly by loading a saved object) on
-   its TPM so that the corresponding call to `TPM2_ActivateCredential()`
-   can succeed, then the client recovers `key0` and decrypts the
-   encrypted secrets.  Here `someObject` can be trivial and need only
-   exist to make the `{Make,Activate}Credential` machinery work.
+   gets to recreate `someObject` (possibly by loading a saved object or
+   by re-creating it on the same non-NULL hierarchy from the same
+   primary seed using the same template and extra entropy) on its TPM so
+   that the corresponding call to `TPM2_ActivateCredential()` can
+   succeed, then the client recovers `key0` and decrypts the encrypted
+   secrets.  Here `someObject` can be trivial and need only exist to
+   make the `{Make,Activate}Credential` machinery work.
 
    TPM replacement and/or migration of a host from one physical system
    to another can be implemented by learning the new system's TPM's
    EKpub and using the offline `backupKey` to compute
    `TPM2_MakeCredential(EKpub_new, someObjectName, key0)` and update the
    host's entry.
+
+ - Alternatively generate a non-restricted decryption private key using
+   a set template and extra entropy, on the same non-NULL hierarchy
+   (i.e., from the same seed), enroll the public key to this private key
+   in an attestation protocol, and have the attestation server store
+   secrets encrypted to that public key.
+
+   (The EK cannot be used this way because it is restricted.)
 
  - Store a secret value that will be extended into an application PCR
    that is used as a policy PCR for unsealing a persistent object stored
@@ -702,8 +712,14 @@ successful attestation:
    value, and the client uses it to extend a PCR such that it can then
    unseal the real storage / filesystem decryption keys.
 
- - A hybrid of the previous two options, where the server stores a
-   secret PCR extension value wrapped with `TPM2_MakeCredential()`.
+   Using a PCR and a policy on the key object allows for a clever
+   break-glass secret recovery mechanism by using a compound extended
+   authorization (EA) policy that allows either unsealing based on a
+   PCR, or maybe based on an password-based HMAC (with machine passwords
+   stored in a safe).
+
+ - A hybrid of the previous options, where the server stores a secret
+   PCR extension value wrapped with `TPM2_MakeCredential()`.
 
 Other ideas?
 
