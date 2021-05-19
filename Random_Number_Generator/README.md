@@ -1,4 +1,4 @@
- <h1>1. Introduction</h1> <p>
+ <h1>1. TPM's True Random Number Generator</h1> <p>
 Among other features, Trusted Platform Modules (TPM) comes with a True Random Number Generator (TRNG) that can be used for various applications including cryptographic purposes.This RNG module serves as the source for randomness for the TPM 2.0 Chip. 
 <p>
 A RNG module in TPM2 will typically contain the following - 
