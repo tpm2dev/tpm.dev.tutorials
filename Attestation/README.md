@@ -95,10 +95,10 @@ key) encrypted to the EKpub and then the attestation client demonstrate
 that it was able to decrypt that with the EK.  However, this is not
 _quite_ how attestation protocols work!  Instead of plain asymmetric
 encryption the server will use
-[`TPM2_MakeCredential()`](TPM2_MakeCredential.md), while the attestation
-client will use
-[`TPM2_ActivateCredential()`](TPM2_ActivateCredential.md) instead of
-plain asymmetric decryption.
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md), while
+the attestation client will use
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+instead of plain asymmetric decryption.
 
 ## Trusted State Attestation
 
@@ -114,15 +114,15 @@ Typically the attestation protocol will have the client generate a
 signing-only asymmetric public key pair known as the attestation key
 (AK) with which to sign the PCR quote and eventlog.  Binding of the
 EKpub and AKpub will happen via
-[`TPM2_MakeCredential()`](TPM2_MakeCredential.md) /
-[`TPM2_ActivateCredential()`](TPM2_ActivateCredential.md).
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) /
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md).
 
-Note that the [`TPM2_Quote()`](TPM2_Quote.md) function produces a signed
+Note that the [`TPM2_Quote()`](/TPM-Commands/TPM2_Quote.md) function produces a signed
 message -- signed with a TPM-resident AK named by the caller (and to
 which they have access), which would be the AK used in the attestation
 protocol.
 
-The output of [`TPM2_Quote()`](TPM2_Quote.md) might be the only part of
+The output of [`TPM2_Quote()`](/TPM-Commands/TPM2_Quote.md) might be the only part of
 a client's messages to the attestation service that include a signature
 made with the AK, but integrity protection of everything else can be
 implied (e.g., the eventlog and PCR values are used to reconstruct the
@@ -140,14 +140,14 @@ digest of the selected PCRs.  `TPM2_Quote()` signs all of:
 
 ## Binding of Other Keys to EKpub
 
-The semantics of [`TPM2_MakeCredential()`](TPM2_MakeCredential.md) /
-[`TPM2_ActivateCredential()`](TPM2_ActivateCredential.md) make it
+The semantics of [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) /
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md) make it
 possible to bind a TPM-resident object to the TPM's EKpub.
 
-[`TPM2_MakeCredential()`](TPM2_MakeCredential.md) encrypts to the EKpub
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) encrypts to the EKpub
 a small secret datum and the name (digest of public part) of the
 TPM-resident object being bound.  The counter-part to this,
-[`TPM2_ActivateCredential()`](TPM2_ActivateCredential.md), will decrypt
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md), will decrypt
 that and return the secret to the application IFF (if and only if) the
 caller has access to the named object.
 
@@ -195,14 +195,14 @@ Let's start with few observations and security considerations:
    timestamps.
 
  - Replay protection of server to client responses is mostly either not
-   needed or implicitly provided by [`TPM2_MakeCredential()`](TMP2_MakeCredential.md)
+   needed or implicitly provided by [`TPM2_MakeCredential()`](TPM2_MakeCredential.md)
    because `TPM2_MakeCredential()` generates a secret seed that
    randomizes its outputs even when all the inputs are the same across
    multiple calls to it.
 
  - Ultimately the protocol *must* make use of
-   [`TPM2_MakeCredential()`](TMP2_MakeCredential.md) and
-   [`TPM2_ActivateCredential()`](TPM2_ActivateCredential.md) in order to
+   [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) and
+   [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md) in order to
    authenticate a TPM-running host via its TPM's EKpub.
 
  - Privacy protection of client identifiers may be needed, in which case
@@ -288,7 +288,7 @@ protocol:
 ![Protocol Diagram](Protocol-Two-Messages.png)
 
 (In this diagram we show the use of a TPM simulator on the server side
-for implementing [`TPM2_MakeCredential()`](TPM2_MakeCredential.md).)
+for implementing [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md).)
 
 The server will validate that the `timestamp` is near the current time,
 the EKcert (if provided, else the EKpub), the signature using the
@@ -340,7 +340,7 @@ desirable anyways for monitoring and alerting purposes.
 ![Protocol Diagram](Protocol-Three-Messages.png)
 
 (In this diagram we show the use of a TPM simulator on the server side
-for implementing [`TPM2_MakeCredential()`](TPM2_MakeCredential.md).)
+for implementing [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md).)
 
 NOTE well that in this protocol, like single round trip attestation
 protocols using only decrypt-only EKs, it is *essential* that the AKcert

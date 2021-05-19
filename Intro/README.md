@@ -291,16 +291,18 @@ necessarily yields a new name.
 > restricted keys.  Still, it may be useful to illustrate cryptographic
 > object naming with one particularly important use of it.
 
-A pair of functions, `TPM2_MakeCredential()` and
-`TPM2_ActivateCredential()`, illustrate the use of cryptographic object
-naming as a binding or a sort of authorization function.
+A pair of functions,
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) and
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md),
+illustrate the use of cryptographic object naming as a binding or a sort
+of authorization function.
 
-`TPM2_MakeCredential()` can be used to encrypt a datum (a "credential")
-to a target TPM such that the target will _only be willing to decrypt
-it_ if *and only if* the application calling `TPM2_ActivateCredential()`
-to decrypt that credential has access to some key named by the sender,
-and that name is a cryptographic name that the sender can and must
-compute for itself.
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) can be
+used to encrypt a datum (a "credential") to a target TPM such that the
+target will _only be willing to decrypt it_ if *and only if* the
+application calling `TPM2_ActivateCredential()` to decrypt that
+credential has access to some key named by the sender, and that name is
+a cryptographic name that the sender can and must compute for itself.
 
 The semantics of these two functions can be used to defeat a
 cut-and-paste attack in attestation protocols.
@@ -312,21 +314,21 @@ keys, each with zero, one, or more children keys:
 
 ```
                 seed
-                 |
-                 |
-                 v
+                /|\
+               / | \
+              v  v  v
      primary key (asymmetric encryption)
-                 |
-                 |
-                 v
+                /|\
+               / | \
+              v  v  v
        secondary keys (of any kind)
-                 |
-                 |
-                 v
+                /|\
+               / | \
+              v  v  v
                 ...
 ```
 
-Note that every key has a parent or is a primary key.
+Keys that have no parent are primary keys.
 
 There are four built-in hierarchies:
 
@@ -540,21 +542,53 @@ Cryptographic keys can either be unrestricted or restricted.
 
 An unrestricted signing key can be used to sign arbitrary content.
 
+An unrestricted decryption key can be used to decrypt arbitrary
+ciphertexts encrypted to that key's public key.
+
+> NOTE WELL: The endorsement key (EK) is a restricted key.
+
+### Restricted Signing Keys
+
 A restricted signing key can be used to sign only TPM-generated content
 as part of specific TPM restricted signing commands.  Such content
 always begins with a magic byte sequence.  Conversely, the TPM refuses
 to sign externally generated content that starts with that magic byte
-sequence.
+sequence.  See the [`TPM2_Certify()`](/TPM-Commands/TPM2_Certify.md),
+[`TPM2_Quote()`](/TPM-Commands/TPM2_Quote.md), `TPM2_CertifyCreation()`,
+`TPM2_GetSessionAuditDigest()`, and `TPM2_GetCommandAuditDigest()` TPM
+commands.
+
+There is also a notion of signing keys that can only be used to sign
+PKIX certificates using `TPM2_CertifyX509()`.
+
+### Restricted Decryption Keys
+
+> NOTE WELL: The endorsement key (EK) is a restricted key.
 
 A restricted decryption key can only be used to decrypt ciphertexts
 whose plaintexts have a certain structure.  In particular these are used
-for `TPM2_MakeCredential()`/`TPM2_ActivateCredential()` to allow the
-TPM-using application to get the plaintext if and only if (IFF) the
-plaintext cryptographically names an object that the application has
-access to.  This is used to communicate secrets ("credentials") to TPMs.
+for [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) /
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+to allow the TPM-using application to get the plaintext if and only if
+(IFF) the plaintext cryptographically names an object that the
+application has access to.  This is used to communicate secrets
+("credentials") to TPMs.
 
-There is also a notion of signing keys that can only be used to sign
-PKIX certificates.
+Another operation that a restricted decryption key can perform is
+[`TPM2_Import()`](/TPM-Commands/TPM2_Import.md), which decrypts a key
+wrapped to the given decrypt-only key and outputs a file that can be
+loaded with [`TPM2_Load()`](/TPM-Commands/TPM2_Load.md).  The wrapped
+key payload given to [`TPM2_Import()`](/TPM-Commands/TPM2_Import.md) too
+has a particular structure and is produced by a remote peer using
+[`TPM2_Duplicate()`](/TPM-Commands/TPM2_Duplicate.md).
+
+To recap, a restricted decryption key can only be used to:
+
+ - "activate credentials" (made with
+   [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md))
+
+ - receive wrapped keys sent by a peer (made with
+   [`TPM2_Duplicate()`](/TPM-Commands/TPM2_Duplicate.md))
 
 ## Attestation
 
