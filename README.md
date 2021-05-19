@@ -10,19 +10,23 @@ Why GitHub?
 - To have an easy way of improving existing [TPM.dev] tutorials
 - To collaborate on creating new ones
 
-## Current list of tutorials from [TPM.dev] members
+## Current list of tutorials
 
-1. [Boot with TPM: Secure vs Measured vs Trusted](Boot-with-TPM/tpmboot.md)
-1. [Random Number Generator](Random_Number_Generator/article.md)
-1. [Attestation, MakeCredential, ActivateCredential](Attestation/README.md)
-1. Introduction to TPM Concepts (Work in progress - PR #8)
+### Getting Started
 
-## List of tutorials that will be transfered to GitHub from [TPM.dev]
+* [Introduction to TPM Concepts](Intro/README.md)
+* [Random Number Generator](Random_Number_Generator/README.md)
 
-1. Localities
-1. Remote Attestation protocols
-1. Quick setup for TPM.dev courses
-1. Attestation Part 1
+### Advanced Use Cases
+
+* [Boot with TPM: Secure vs Measured vs Trusted](Boot-with-TPM/README.md)
+* [Attestation, MakeCredential, ActivateCredential](Attestation/README.md)
+
+## Upcomming tutorials
+
+* Localities
+* Remote Attestation protocols
+* Quick setup for TPM.dev courses
 
 ## Contributors
 
