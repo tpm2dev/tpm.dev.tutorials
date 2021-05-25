@@ -64,6 +64,26 @@ Attestation is done by a client computer with a TPM interacting with an
 attestation service over a network.  This requires a network protocol
 for attestation.
 
+## Intended Audience
+
+Readers should have read the [TPM introduction tutorial](/Intro/README.md).
+
+## Enrollment
+
+[Enrollment](/Enrollment/README.md) is the process and protocol for
+onboarding devices into a network / organization.  For example, adding
+an IoT to a home network, a server to a data center, a smartphone or
+tablet or laptop to a persons set of personal devices, etc.
+
+Generally attestation protocols apply to enrolled devices.  Enrollment
+protocols _may_ be very similar to attestation protocols, or even
+actually be sub-protocols of attestation protocols.  Enrollment
+protocols can also be separate from attestation altogether.
+
+This tutorial mostly covers only attestation of/by enrolled devices.
+For more about enrollment see the tutorial specifically for
+[enrollment](/Enrollment/README.md).
+
 ## Notation
 
  - `Encrypt_<name>` == encryption with the named private or secret key
@@ -78,6 +98,70 @@ for attestation.
  - `{"key":<value>,...}` == JSON text
  - `TPM2_MakeCredential(<args>)` == outputs of calling `TPM2_MakeCredential()` with `args` arguments
  - `TPM2_Certify(<args>)` == outputs of calling `TPM2_Certify()` with `args` arguments
+ - `XK` == `<X>` key, for some `<X>` purpose (the TPM-resident object and its private key)
+    - `EK` == endorsement key (the TPM-resident object and its private key)
+    - `AK` == attestation key (the TPM-resident object and its private key)
+    - `TK` == transport key (the TPM-resident object and its private key)
+ - `XKpub` == `<X>`'s public key, for some `<X>` purpose
+    - `EKpub` == endorsement public key
+    - `AKpub` == attestation public key
+    - `TKpub` == transport public key
+ - `XKname` == `<X>`'s cryptographic name, for some `<X>` purpose
+    - `EKname` == endorsement key's cryptographic name
+    - `AKname` == attestation key's cryptographic name
+
+## Threat Models
+
+Some threats that an attestation protocol and implementation may want to
+address:
+
+ - attestation client impersonation
+ - attestation server impersonation
+ - unauthorized firmware and/or OS updates
+ - theft or compromise of of attestation servers
+ - theft of client devices or their local storage (e.g., disks, JBODs)
+ - theft of client devices by adversaries capable of decapping and
+   reading the client's TPM's NVRAM
+
+The attestation protocols we discuss will provide at least partial
+protection against impersonation of attestation clients: once a TPM's
+EKpub/EKcert are bound to the device in the attestation server's
+database, that TPM can only be used for that device and no others.
+
+All the attestation protocols we discuss will provide protection against
+unauthorized firmware and/or OS updates via attestation of root of trust
+measurements (RTM).
+
+The attestation protocols we discuss will provide protection against
+impersonation of attestation servers without necessarily authenticating
+the servers to the clients in traditional ways (e.g., using TLS server
+certificates).  The role of the attestation server will be to deliver to
+clients secrets and credentials they need that can only be correct and
+legitimate if the server is authentic.  As well, an attestation server
+may unlock network access for a client, something only an authentic
+server could do.
+
+We will show how an attestation server can avoid storing any cleartext
+secrets.
+
+Theft of _running_ client devices cannot be fully protected against by
+an attestation protocol.  The client must detect being taken from its
+normal environment and shutdown in such a way that no secrets are left
+in cleartext on any of its devices.  Frequent attestations might be used
+to detect theft of a client, but other keepalive signalling options are
+possible.
+
+Theft of non-running client devices can be protected against by having
+the client shutdown in such a way that no secrets are left in cleartext
+on any of its devices.  Such client devices may be configured to need
+the help of an attestation server to recover the secrets it needs for
+normal operation.
+
+Full protection against decapping of TPM chips is not possible, but
+protection against off-line use of secrets stolen from TPM chips is
+possible by requiring that the client be on-line and attest in order to
+obtain secrets that it needs to operate.  This allows for revocation of
+stolen clients, which would result in attestation protocol failures.
 
 ## Proof of Possession of TPM
 
@@ -314,7 +398,7 @@ is persisted both, in the client TPM and in the attestation service's
 database:
 
 ```
-  <having previously successfully enrolled AKpub and bound it to EKpub...>
+  <having previously successfully enrolled>
 
   CS0:  timestamp, AKpub, PCRs, eventlog,
         TPM2_Quote(AK, PCRs, extra_data)=Signed_AK({hash-of-PCRs, misc, extra_data})
@@ -505,10 +589,6 @@ PCRs are desired, then this becomes a one round trip protocol.
 
 An AKcert will be added to the Safeboot protocol soon.
 
-### Actual Protocols: ...
-
-(TBD)
-
 ## Attestation Protocol Patterns and Actual Protocols (signing-only EKs)
 
 Some TPMs come provisioned with signing-only endorsement keys in
@@ -609,8 +689,8 @@ A schema for the attestation server's database entries might look like:
   "previous_PCRs": "<...>",
   "proposed_PCRs": "<...>",
   "ak_cert_template": "<AKCertTemplate>",
-  "secrets": "<secrets>",
-  "resetCount": "<resetCount value from last quote>"
+  "resetCount": "<resetCount value from last quote>",
+  "secrets": "<see below>"
 }
 ```
 
@@ -660,12 +740,28 @@ then an administrator would confirm that the client just did a
 firmware/OS upgrade and if so replace the `previous_PCRs` with the
 `proposed_PCRs`, then the client could attempt attestation again.
 
-## Dealing with Secrets
+# Delivery of Secrets to Attestation Clients
 
-An attestation server might want to return storage/filesystem decryption
-key-encryption-keys to a client.  But one might not want to store those
-keys in the clear on the attestation server.  As well, one might want a
-break-glass way to recover those secrets.
+An attestation server might have to return storage/filesystem decryption
+key-encryption-keys (KEKs) to a client.  But one might not want to store
+those keys in the clear on the attestation server.  As well, one might
+want a break-glass way to recover those secrets.
+
+Possible goals:
+
+ - store secrets that clients need on the attestation server
+ - do not store plaintext or plaintext-equivalent secrets on the
+   attestation server
+ - allow for adding more secrets to send to the client after enrollment
+ - provide a break-glass recovery mechanism
+
+Note that in all cases the client does get direct access to various
+secrets.  Using a TPM to prevent direct software access to those secrets
+would not be performant if, for example, those secrets are being used to
+encrypt filesystems.  We must inherently trust the client to keep those
+secrets safe when running.
+
+## Break-Glass Recovery
 
 For break-glass recovery, the simplest thing to do is to store
 `Encrypt_backupKey({EKpub, hostname, secrets})`, where `backupKey` is an
@@ -675,53 +771,252 @@ the ciphertext to the offline system where the private backup key is
 kept, decrypt it, and then use the secrets manually to recover the
 affected system.
 
-Here are some ideas for how to make an attestation client depend on the
-attestation server giving it keys needed to continue booting after
-successful attestation:
+## Secret Transport Sub-Protocols
 
- - Store `TPM2_MakeCredential(EKpub, someObjectName, key0), Encrypt_key0(secrets)`.
+Here we describe several possible sub-protocols of attestation protocols
+for secret transport.  This list is almost certainly not exhaustive.
 
-   In this mode the server sends the client the stored data, then client
-   gets to recreate `someObject` (possibly by loading a saved object or
-   by re-creating it on the same non-NULL hierarchy from the same
-   primary seed using the same template and extra entropy) on its TPM so
-   that the corresponding call to `TPM2_ActivateCredential()` can
-   succeed, then the client recovers `key0` and decrypts the encrypted
-   secrets.  Here `someObject` can be trivial and need only exist to
-   make the `{Make,Activate}Credential` machinery work.
+### Store a `TPM2_MakeCredential()` Payload
 
-   TPM replacement and/or migration of a host from one physical system
-   to another can be implemented by learning the new system's TPM's
-   EKpub and using the offline `backupKey` to compute
-   `TPM2_MakeCredential(EKpub_new, someObjectName, key0)` and update the
-   host's entry.
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) and
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+can use any kind of loaded object with a private area as the "credential
+object name" and "credential object handle" arguments of the two calls,
+respectively.  During attestation we need to use an AK for this object
+due to the need to have a signature key for
+[`TPM2_Quote()`](/TPM-Commands/TPM2_Quote.md), and we want that AK to
+have `stClear` set, meaning that it is ephemeral, rendering the outputs
+of `TPM2_MakeCredential(EKpub, AKname, secrets)` ephemeral as well,
+therefore `TPM2_MakeCredential(EKpub, AKname, secrets)` must be called
+on each attestation, which means the `secrets` also have to be ephemeral
+or else must be stored in cleartext on the attestation server.
 
- - Alternatively generate a non-restricted decryption private key using
-   a set template and extra entropy, on the same non-NULL hierarchy
-   (i.e., from the same seed), enroll the public key to this private key
-   in an attestation protocol, and have the attestation server store
-   secrets encrypted to that public key.
+However, we can use a key that does not have `stClear` set as the
+credential object.  A long-term key that survives reboots.
 
-   (The EK cannot be used this way because it is restricted.)
+> We'd like to use the EK itself, however,
+> [that is not actually possible](https://github.com/tpm2-software/tpm2-tools/issues/1883)
+> because the `activateHandle` argument to
+> [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+> requires `ADMIN` role, and on most TPMs the auth policy for the EK
+> does not provide any way to satisfy it for this usage.  Though in
+> principle this should be possible, and it would be very convenient if
+> it was.
 
- - Store a secret value that will be extended into an application PCR
-   that is used as a policy PCR for unsealing a persistent object stored
-   on the client's TPM.
+So for this approach one has to create a long-term attestation key that
+we shall call the `LTAK`, and then the server can store
+`TPM2_MakeCredential(EKpub, LTAKname, secrets)` without knowing the
+secrets.
 
-   In this mode the server sends the client the secret PCR extension
-   value, and the client uses it to extend a PCR such that it can then
-   unseal the real storage / filesystem decryption keys.
+The client has to use
+[`TPM2_CreatePrimary()`](/TPM-Commands/TPM2_CreatePrimary.md) or
+[`TPM2_CreateLoaded()`](/TPM-Commands/TPM2_CreateLoaded.md) in order to
+deterministically create the same `LTAK` (again, without the `stClear`
+attribute), else if it uses
+[`TPM2_Create()`](/TPM-Commands/TPM2_Create.md) then it must store the
+key save file somewhere (possibly in the attestation server!) or make
+the key object persistent.
 
-   Using a PCR and a policy on the key object allows for a clever
-   break-glass secret recovery mechanism by using a compound extended
-   authorization (EA) policy that allows either unsealing based on a
-   PCR, or maybe based on an password-based HMAC (with machine passwords
-   stored in a safe).
+```
+  <having previously successfully enrolled
+    and saved
+      long_term_Credential =
+        TPM2_MakeCredential(EKpub, LTAKname, secrets_key) ||
+        Encrypt_secrets_key(long_term_secrets)>
 
- - A hybrid of the previous options, where the server stores a secret
-   PCR extension value wrapped with `TPM2_MakeCredential()`.
+  CS0:  timestamp, AKpub, PCRs, eventlog,
+        TPM2_Quote(AK, PCRs, extra_data)=Signed_AK({hash-of-PCRs, misc, extra_data})
+  SC0:  {TPM2_MakeCredential(EKpub, AKname, session_key),
+         Encrypt_session_key(long_term_Credential)}
+```
 
-Other ideas?
+New secrets can be added at any time without interaction with the
+client if the attestation server recalls the `LTAKname`.
+
+The schema for storing secrets transported this way would be:
+
+```JSON
+{
+  "EKpub": "<EKpub>",
+  "hostname": "<hostname>",
+  "EKcert": "<EKcert in PEM, if available>",
+  "previous_firmware_profile": "FWProfile0",
+  "current_firmware_profiles": ["FWProfile1", "FWProfile2", "..."],
+  "previous_operating_system_profiles": "OSProfile0",
+  "current_operating_system_profiles": ["OSProfile1", "OSProfile2", "..."],
+  "previous_PCRs": "<...>",
+  "proposed_PCRs": "<...>",
+  "ak_cert_template": "<AKCertTemplate>",
+  "resetCount": "<resetCount value from last quote>",
+
+  "secret store and transport fields":"vvvvvvvvvvvvvvvvvv",
+
+  "LTAKname": "<...>",
+  "secrets": ["<MakeCredential_0>", "<MakeCredential_1>", "..", "<MakeCredential_N>"]
+  "secrets_backup": ["<RSA_Encrypt_to_backup_key(...)", "..."],
+}
+```
+
+### Use an Unrestricted Decryption Transport Key (TK) for Secret Transport (client-side)
+
+Another option is to generate an asymmetric key-pair at device
+enrollment time (we shall call this the "transport key", or `TK`), and
+store:
+
+ - the `TKpub`, and
+
+ - zero, one, or more secrets encrypted in the `EKpub`.
+
+The client has to use
+[`TPM2_CreatePrimary()`](/TPM-Commands/TPM2_CreatePrimary.md) or
+[`TPM2_CreateLoaded()`](/TPM-Commands/TPM2_CreateLoaded.md) in order to
+deterministically create the same `TK` (without the `stClear`)
+attribute, else if it uses
+[`TPM2_Create()`](/TPM-Commands/TPM2_Create.md) then it must store the
+key save file somewhere (possibly in the attestation server!) or make
+the key object persistent.
+
+New secrets can be added at any time without interaction with the
+client.
+
+```JSON
+{
+  "EKpub": "<EKpub>",
+  "hostname": "<hostname>",
+  "EKcert": "<EKcert in PEM, if available>",
+  "previous_firmware_profile": "FWProfile0",
+  "current_firmware_profiles": ["FWProfile1", "FWProfile2", "..."],
+  "previous_operating_system_profiles": "OSProfile0",
+  "current_operating_system_profiles": ["OSProfile1", "OSProfile2", "..."],
+  "previous_PCRs": "<...>",
+  "proposed_PCRs": "<...>",
+  "ak_cert_template": "<AKCertTemplate>",
+  "resetCount": "<resetCount value from last quote>",
+
+  "secret store and transport fields":"vvvvvvvvvvvvvvvvvv",
+
+  "TKpub": "<TKpub in PEM>",
+  "secrets": ["<RSA_Encrypt_0>", "<RSA_Encrypt_1>", "..", "<RSA_Encrypt_N>"]
+  "secrets_backup": ["<RSA_Encrypt_to_backup_key(...)", "..."],
+}
+```
+
+### Use an Unrestricted Decryption Transport Key (TK) for Secret Transport (server-side)
+
+Another option is to generate an asymmetric key-pair at device
+enrollment time (we shall call this the "transport key", or `TK`), and
+store:
+
+ - the TK exported to the client device's TPM (i.e., the output of
+   `TPM2_Duplicate()` called on that private key to export it to the
+   client's TPM's EKpub), and
+
+ - the ciphertext resulting from encrypting long-term secrets to that
+   TK.
+
+At attestation time the server can send back these two values to the
+client, and then the client can `TPM2_Import()` and then `TPM2_Load()`
+the duplicated (exported) TK, then use it to `TPM2_RSA_Decrypt()` the
+encrypted long-term secrets.
+
+New secrets can be added at any time without interaction with the
+client.
+
+```JSON
+{
+  "EKpub": "<EKpub>",
+  "hostname": "<hostname>",
+  "EKcert": "<EKcert in PEM, if available>",
+  "previous_firmware_profile": "FWProfile0",
+  "current_firmware_profiles": ["FWProfile1", "FWProfile2", "..."],
+  "previous_operating_system_profiles": "OSProfile0",
+  "current_operating_system_profiles": ["OSProfile1", "OSProfile2", "..."],
+  "previous_PCRs": "<...>",
+  "proposed_PCRs": "<...>",
+  "ak_cert_template": "<AKCertTemplate>",
+  "resetCount": "<resetCount value from last quote>",
+
+  "secret store and transport fields":"vvvvvvvvvvvvvvvvvv",
+
+  "TKdup": "<output of TPM2_Duplicate(EKpub, TK)>",
+  "TKpub": "<TKpub in PEM>",
+  "secrets": ["<RSA_Encrypt_0>", "<RSA_Encrypt_1>", "..", "<RSA_Encrypt_N>"]
+  "secrets_backup": ["<RSA_Encrypt_to_backup_key(...)", "..."],
+}
+```
+
+### Store a Secret PCR Extension Value for Unsealing Data Objects
+
+The attestation server could store in plaintext a secret that it will
+returned encrypted to the client's EKpub vias `TPM2_MakeCredential()`,
+and which the client must use to extend a PCR (e.g., the debug PCR) to
+get that PCR into the state needed to unseal a persistent data object on
+the TPM.
+
+Because the sealed data object may itself be stored in cleartext in the
+TPM's NVRAM, and because an attacker might be able to decap a stolen
+client device's TPM and recover the TPM's NVRAM contents and seeds, the
+client might store an encrypted value in that sealed data object that
+the TPM does not have the keey to decrypt.  The decryption key would be
+sent by the attestation server (possibly being the same secret as is
+extended into that PCR).
+
+```JSON
+{
+  "EKpub": "<EKpub>",
+  "hostname": "<hostname>",
+  "EKcert": "<EKcert in PEM, if available>",
+  "previous_firmware_profile": "FWProfile0",
+  "current_firmware_profiles": ["FWProfile1", "FWProfile2", "..."],
+  "previous_operating_system_profiles": "OSProfile0",
+  "current_operating_system_profiles": ["OSProfile1", "OSProfile2", "..."],
+  "previous_PCRs": "<...>",
+  "proposed_PCRs": "<...>",
+  "ak_cert_template": "<AKCertTemplate>",
+  "resetCount": "<resetCount value from last quote>",
+
+  "secret store and transport fields":"vvvvvvvvvvvvvvvvvv",
+
+  "unseal_key": "<key>",
+  "secrets_backup": ["<RSA_Encrypt_to_backup_key(...)", "..."],
+}
+```
+
+### Store Secrets in Plaintext, Encrypt to EKpub Using `TPM2_MakeCredential()`
+
+As the title says, one option is to store the secrets in plaintext and
+send them encrypted to the EKpub via
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md).
+Because [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md)
+encrypts only a small secret, it goes without saying that that secret
+would be a one-time use symmetric encryption key that would be used to
+encrypt the actual secrets.
+
+This is, naturally, the least desirable option.
+
+```JSON
+{
+  "EKpub": "<EKpub>",
+  "hostname": "<hostname>",
+  "EKcert": "<EKcert in PEM, if available>",
+  "previous_firmware_profile": "FWProfile0",
+  "current_firmware_profiles": ["FWProfile1", "FWProfile2", "..."],
+  "previous_operating_system_profiles": "OSProfile0",
+  "current_operating_system_profiles": ["OSProfile1", "OSProfile2", "..."],
+  "previous_PCRs": "<...>",
+  "proposed_PCRs": "<...>",
+  "ak_cert_template": "<AKCertTemplate>",
+  "resetCount": "<resetCount value from last quote>",
+
+  "secret store and transport fields":"vvvvvvvvvvvvvvvvvv",
+
+  "secrets": ["<secret_0>", "<secret_1>", "<secret_N>"]
+}
+```
+
+# Security Considerations
+
+TBD
 
 # References
 
