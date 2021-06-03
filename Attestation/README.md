@@ -780,54 +780,103 @@ for secret transport.  This list is almost certainly not exhaustive.
 
 [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) and
 [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
-can use any kind of loaded object with a private area as the "credential
-object name" and "credential object handle" arguments of the two calls,
-respectively.  During attestation we need to use an AK for this object
-due to the need to have a signature key for
-[`TPM2_Quote()`](/TPM-Commands/TPM2_Quote.md), and we want that AK to
-have `stClear` set, meaning that it is ephemeral, rendering the outputs
-of `TPM2_MakeCredential(EKpub, AKname, secrets)` ephemeral as well,
-therefore `TPM2_MakeCredential(EKpub, AKname, secrets)` must be called
-on each attestation, which means the `secrets` also have to be ephemeral
-or else must be stored in cleartext on the attestation server.
+are a form of limited asymmetric encryption (`TPM2_MakeCredential()`)
+and asymmetric decryption (`TPM2_ActivateCredential()`) subject to the
+sender's choice of authorization.  The details are explained
+[here](/TPM-Commands/TPM2_MakeCredential.md) and
+[here](/TPM-Commands/TPM2_ActivateCredential.md).  Basically, there are
+two TPM key objects involved:
 
-However, we can use a key that does not have `stClear` set as the
-credential object.  A long-term key that survives reboots.
+ - a transport key (typically the `EK`),
+ - and an authorization key (typically an `AK`)
 
-> We'd like to use the EK itself, however,
-> [that is not actually possible](https://github.com/tpm2-software/tpm2-tools/issues/1883)
-> because the `activateHandle` argument to
-> [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
-> requires `ADMIN` role, and on most TPMs the auth policy for the EK
-> does not provide any way to satisfy it for this usage.  Though in
-> principle this should be possible, and it would be very convenient if
-> it was.
+and the caller of `TPM2_MakeCredential()` must specify the public part
+of the transport key and the
+[name](/Intro/README.md#Cryptographic-Object-Naming) of the
+authorization key, along with a small secret to transport.  The caller
+of `TPM2_ActivateCredential()` must then provide the handles for those
+two key objects and the outputs of `TPM2_MakeCredential()` in order to
+extract the small secret.  Typically the small secret is an AES key for
+encrypting larger secrets.
 
-So for this approach one has to create a long-term attestation key that
-we shall call the `LTAK`, and then the server can store
-`TPM2_MakeCredential(EKpub, LTAKname, secrets)` without knowing the
-secrets.
+So if we can store the outputs of `TPM2_MakeCredential()` long-term so
+that the client can activate over multiple reboots, then we have a way
+to deliver secrets to the client.
 
-The client has to use
-[`TPM2_CreatePrimary()`](/TPM-Commands/TPM2_CreatePrimary.md) or
-[`TPM2_CreateLoaded()`](/TPM-Commands/TPM2_CreateLoaded.md) in order to
-deterministically create the same `LTAK` (again, without the `stClear`
-attribute), else if it uses
-[`TPM2_Create()`](/TPM-Commands/TPM2_Create.md) then it must store the
-key save file somewhere (possibly in the attestation server!) or make
-the key object persistent.
+We'll discuss two ways to do this:
+
+ - use a `WK` -- a universally well-known key (thus WK, for well-known)
+
+   Since the `WK`'s private area is not used for any cryptography in
+   `TPM2_MakeCredential()`/`TPM2_ActivateCredential()`, it can be a key
+   that everyone knows.
+
+   Note that the `WK`'s public area can name arbitrary an auth policy,
+   and `TPM2_MakeCredential()` will enforce it.
+
+   E.g., the `WK` could be the all-zeros AES key.  Its policy could be
+   whatever is appropriate for the organization.  For example, the
+   policy could require that some non-resettable application PCR have
+   the value zero so that extending it can disable use of
+   `TPM2_MakeCredential()` post-boot.
+
+ - use an `LTAK` -- a long-term `AK`
+
+   I.e., an `AK` that lacks the `stClear` attribute, and _preferably_
+   created deterministically with either
+   [`TPM2_CreateLoaded()`](/TPM-Commands/TPM2_CreateLoaded.md) or
+   [`TPM2_CreatePrimary()`](/TPM-Commands/TPM2_CreatePrimary.md).
+
+   > Note that the `LTAK` need not be a primary.
+
+   > If the `LTAK` were created with
+   > [`TPM2_Create()`](/TPM-Commands/TPM2_Create.md) then the key's saved
+   > context file would have to be stored somewhere so that it could be
+   > loaded again on next boot with
+   > [`TPM2_Load()`](/TPM-Commands/TPM2_Load.md).  Whereas creating it
+   > deterministically means that it can be re-created every time it's
+   > needed using the same hiercarchy, template, and entropy as
+   > arguments to `TPM2_CreatePrimary()` or `TPM2_CreateLoaded()`
+
+   Note that the `AK`'s public area can name arbitrary an auth policy,
+   and `TPM2_MakeCredential()` will enforce it.
+
+The best option here is to use a `WK` because using an `LTAK` would
+require recording its public key in the device's enrolled attestation
+state, which would complicate enrollment, whereas the `WK`, being
+well-known and the same for all cases, would not need to be recorded in
+server-side attestation state.
+
+> One might like to use the `EK` as the `activateHandle`.  Sadly, this
+> is not possible.
+> While `TPM2_MakeCredential(EKpub, EKname, input)` works,
+> `TPM2_ActivateCredential(EK, EK, credentialBlob, secret)` does not
+>  and cannot.
+>
+> The reason for this is that `TPM2_ActivateCredential()` requires
+> `ADMIN` role for the `activateHandle`, and since the `EK` has
+> `adminWithPolicy` attribute set and its policy doesn't have the
+> `TPM_CC_ACTIVATECREDENTIAL` command permitted, the call must fail.
+>
+> Credit for the `WK` idea goes to [Erik > Larsson](https://developers.tpm.dev/chats/new?user_id=4336638).
+
+Normally during attestation we want to use an `AK` with `stClear` set so
+that each boot forces the client to use a new one.  However, for sending
+secrets to the client via `TPM2_MakeCredential()` /
+`TPM2_ActivateCredential()` we really need need the `activateHandle`
+object to not have `stClear` set.
+
+For this approach then, the best solution is to use a `WK`.
 
 ```
-  <having previously successfully enrolled
-    and saved
-      long_term_Credential =
-        TPM2_MakeCredential(EKpub, LTAKname, secrets_key) ||
-        Encrypt_secrets_key(long_term_secrets)>
-
   CS0:  timestamp, AKpub, PCRs, eventlog,
         TPM2_Quote(AK, PCRs, extra_data)=Signed_AK({hash-of-PCRs, misc, extra_data})
   SC0:  {TPM2_MakeCredential(EKpub, AKname, session_key),
          Encrypt_session_key(long_term_Credential)}
+
+    where
+
+      long_term_Credential = TPM2_MakeCredential(EKpub, WKname, secrets)
 ```
 
 New secrets can be added at any time without interaction with the
@@ -846,12 +895,10 @@ The schema for storing secrets transported this way would be:
   "current_operating_system_profiles": ["OSProfile1", "OSProfile2", "..."],
   "previous_PCRs": "<...>",
   "proposed_PCRs": "<...>",
-  "ak_cert_template": "<AKCertTemplate>",
   "resetCount": "<resetCount value from last quote>",
 
   "secret store and transport fields":"vvvvvvvvvvvvvvvvvv",
 
-  "LTAKname": "<...>",
   "secrets": ["<MakeCredential_0>", "<MakeCredential_1>", "..", "<MakeCredential_N>"]
   "secrets_backup": ["<RSA_Encrypt_to_backup_key(...)", "..."],
 }
