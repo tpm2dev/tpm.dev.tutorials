@@ -48,6 +48,39 @@ general, which include:
 > software development using TPMs will want to make use of [TCG
 > specifications and other resources](#Other-Resources).
 
+## Use Cases
+
+Here are _some_ use cases that TPMs can be applied to
+
+ - off-line root of trust measurement (RTM) to check that a device is
+   healthy
+
+   ("off-line" meaning "no network needed")
+
+    - encrypted storage
+
+ - online RTM to check that a device is healthy and authorize it to have
+   access to a network
+
+   ("online" meaning "demonstrate health via networked interaction with
+   other devices")
+
+    - encrypted storage
+
+ - hardware security module (HSM)
+
+    - certification authority (CA)
+    - TPMs as smartcards
+
+ - authentication and authorization of console and/or remote user logins
+
+    - e.g., require biometrics, smartcard, admin credentials, multiple
+      users' authentication, time-of-day restrictions, etc.
+
+ - entropy source (random number generator)
+
+ - cryptographic co-processor
+
 ## Glossary
 
 > For a glossary, see section 4 of [TCG TPM 2.0 Library part 1:
@@ -291,16 +324,18 @@ necessarily yields a new name.
 > restricted keys.  Still, it may be useful to illustrate cryptographic
 > object naming with one particularly important use of it.
 
-A pair of functions, `TPM2_MakeCredential()` and
-`TPM2_ActivateCredential()`, illustrate the use of cryptographic object
-naming as a binding or a sort of authorization function.
+A pair of functions,
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) and
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md),
+illustrate the use of cryptographic object naming as a binding or a sort
+of authorization function.
 
-`TPM2_MakeCredential()` can be used to encrypt a datum (a "credential")
-to a target TPM such that the target will _only be willing to decrypt
-it_ if *and only if* the application calling `TPM2_ActivateCredential()`
-to decrypt that credential has access to some key named by the sender,
-and that name is a cryptographic name that the sender can and must
-compute for itself.
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) can be
+used to encrypt a datum (a "credential") to a target TPM such that the
+target will _only be willing to decrypt it_ if *and only if* the
+application calling `TPM2_ActivateCredential()` to decrypt that
+credential has access to some key named by the sender, and that name is
+a cryptographic name that the sender can and must compute for itself.
 
 The semantics of these two functions can be used to defeat a
 cut-and-paste attack in attestation protocols.
@@ -312,21 +347,21 @@ keys, each with zero, one, or more children keys:
 
 ```
                 seed
-                 |
-                 |
-                 v
+                /|\
+               / | \
+              v  v  v
      primary key (asymmetric encryption)
-                 |
-                 |
-                 v
+                /|\
+               / | \
+              v  v  v
        secondary keys (of any kind)
-                 |
-                 |
-                 v
+                /|\
+               / | \
+              v  v  v
                 ...
 ```
 
-Note that every key has a parent or is a primary key.
+Keys that have no parent are primary keys.
 
 There are four built-in hierarchies:
 
@@ -346,10 +381,18 @@ used to authenticate the TPM's legitimacy.  The EK's public key
 ("EKpub") can be used to uniquely identify a TPM, and possibly link to
 the platform's, and even the platform's user(s)' identities.
 
-The `TPM2_CreatePrimary()` and `TPM2_CreateLoaded()` commands create key
-objects deterministically from the hierarchy's seed and the "template"
-used to create the key (which includes a "unique" area that provides
-"entropy" to the key derivation function).
+The [`TPM2_CreatePrimary()`](TPM2_CreatePrimary.md) command creates
+primary key objects deterministically from the hierarchy's seed and the
+"template" used to create the key (which includes a "unique" area that
+provides "entropy" to the key derivation function).
+
+The [`TPM2_Create()`](TPM2_Create.md) command creates a ordinary
+objects.
+
+The [`TPM2_CreateLoaded()`](TPM2_CreateLoaded.md) command can also
+create primary key objects deterministically from the hierarchy's seed
+and the "template" used to create the key (which includes a "unique"
+area that provides "entropy" to the key derivation function).
 
 ## Key Wrapping and Resource Management
 
@@ -482,16 +525,36 @@ policy because the TPM knows only a digest of it.
 Construction of a policy consists of computing it by hash extending an
 initial all-zeroes value with the commands that make up the policy.
 
+This can be done entirely in software, but the TPM supports a notion of
+"trial sessions" where the application can issue policy commands to
+build up a policy digest without the application having to know how to
+do that in software.  Trial sessions have every policy command succeed,
+but they authorize nothing -- the point of a trial session is only to
+compute and extract a `policyDigest` at the end of the policy.
+
 ### Policy Evaluation
 
 Evaluation of a policy consists of issuing those same commands to the
-TPM in a session, with those commands either evaluated immediately or
-deferred to the time of execution of the to-be-authorized command, but
-the TPM computes the same hash extension as it goes.  Once all policy
-commands being evaluated have succeeded, the resulting hash extension
-value is compared to the policy that protects the resource(s) being used
-by the to-be-authorized command, and if it matches, then the command is
-allowed, otherwise it is not.
+TPM in a [non-trial] session, with those commands either evaluated
+either immediately or deferred to the time of execution of the
+to-be-authorized command, but the TPM computes the same hash extension
+as it goes.  Once all policy commands issued have been evaluated and
+have succeeded, the resulting hash extension value is compared to the
+policy that protects the resource used by the to-be-authorized command,
+and if and only if the digest matches, then the command is allowed,
+otherwise it is not.
+
+For example, one might construct a policy like so:
+
+```bash
+$ tpm2 flushcontext -t
+$ tpm2 flushcontext -s
+$ tpm2 startauthsession --session session.ctx --policy-session
+$ tpm2 policysecret --session session.ctx --object-context endorsement
+$ tpm2 policycommandcode -S session.ctx -L activate.ctx TPM2_CC_ActivateCredential
+```
+
+which saves the digest of the policy in a file named `activate.ctx`.
 
 ### Indirect Policies
 
@@ -530,9 +593,108 @@ indexes, policies can be used to:
 ## Sessions
 
 A session is an object (meaning, among other things, that it can be
-loaded and unloaded as needed) that represents the current policy
-construction or evaluation hash extension digest (the `policyDigest`),
-and the objects that have been granted access.
+loaded and unloaded as needed) that represents the current state used
+for authorization of actions or for encryption of traffic between the
+application and the TPM.
+
+There are two types of sessions then: those used for authorization, and
+those used for encryption of application `<->` TPM communication.
+
+Authorization sessions contain state such as a `policyDigest`
+representing authorization policy that has been satisfied, and various
+other state.  TPM commands may check that an authorization session's
+state satisfies the requirements for use of the argument objects passed
+to the commands.
+
+### Authorization Session State
+
+Authorization sessions have a number of state attributes.  Some of these
+are set at the time of creation of the session.  Some of these can be
+set directly with `TPM2_Policy*()` commands.  Others evolve in other
+ways.  These state attributes are:
+
+ - `policyDigest`
+
+   A hash extension digest of all the policy commands sent by the
+   application in this session thus far.  Every successful
+   `TPM2_Policy*()` command extends this.
+
+   Objects may have a policy digest set on them to refer to the policy
+   that an application must meet in order to use them.  The application
+   has to issue the `TPM2_Policy*()` commands, in order, that produce
+   that digest, the commands must all succeed, and the `policyDigest`
+   must equal that of the object.
+
+ - `isTrialPolicy`
+
+   When this is set then the session will not authorize anything at all
+   and all policy commands will be assumed to be met and will not be
+   evaluated.  This is useful for constructing and extracting from the
+   TPM the `policyDigest` of a policy to set on some future new
+   object(s).
+
+   Sessions that have this set are known as "trial sessions".
+
+   Applications can construct `policyDigest` values entirely in
+   software, but using the TPM with a trial session saves one the
+   bother.
+
+ - `commandCode`
+
+   Identifies a command that will be authorized by the policy referred
+   to by `policyDigest`.
+
+   If a policy requires this, then it authorizes the one command
+   identified by the command code.
+
+ - `cpHash`
+
+   A hash of some command's parameters.  If a policy requires this, then
+   it authorizes the one command whose parameters match this hash.
+
+ - `commandLocality`
+
+   A locality that the application must be in.
+
+ - policy reuse / expiration state:
+
+    - `startTime`
+
+      The start time of the session.
+
+    - `timeout`
+
+      The lifetime of the session.
+
+    - `nonceTPM`
+
+ - Authentication requirements:
+
+    - `isAuthValueNeeded`
+
+    - `isPasswordNeeded`
+
+    - `isPPRequired`
+
+      PP == physical presence.
+
+ - `checkNvWritten`
+
+ - `nvWrittenState`
+
+ - `nameHash`
+
+ - `pcrUpdateCounter`
+
+### Encryption Sessions
+
+> Work in progress.
+
+Sessions can also be used for encrypting TPM command arguments and
+results.  This can be useful when one does not trust the path to the
+TPM, such as when the TPM is remote.
+
+> TODO: Discuss key exchange options, etc.
 
 ## Restricted Cryptographic Keys
 
@@ -540,21 +702,53 @@ Cryptographic keys can either be unrestricted or restricted.
 
 An unrestricted signing key can be used to sign arbitrary content.
 
+An unrestricted decryption key can be used to decrypt arbitrary
+ciphertexts encrypted to that key's public key.
+
+> NOTE WELL: The endorsement key (EK) is a restricted key.
+
+### Restricted Signing Keys
+
 A restricted signing key can be used to sign only TPM-generated content
 as part of specific TPM restricted signing commands.  Such content
 always begins with a magic byte sequence.  Conversely, the TPM refuses
 to sign externally generated content that starts with that magic byte
-sequence.
+sequence.  See the [`TPM2_Certify()`](/TPM-Commands/TPM2_Certify.md),
+[`TPM2_Quote()`](/TPM-Commands/TPM2_Quote.md), `TPM2_CertifyCreation()`,
+`TPM2_GetSessionAuditDigest()`, and `TPM2_GetCommandAuditDigest()` TPM
+commands.
+
+There is also a notion of signing keys that can only be used to sign
+PKIX certificates using `TPM2_CertifyX509()`.
+
+### Restricted Decryption Keys
+
+> NOTE WELL: The endorsement key (EK) is a restricted key.
 
 A restricted decryption key can only be used to decrypt ciphertexts
 whose plaintexts have a certain structure.  In particular these are used
-for `TPM2_MakeCredential()`/`TPM2_ActivateCredential()` to allow the
-TPM-using application to get the plaintext if and only if (IFF) the
-plaintext cryptographically names an object that the application has
-access to.  This is used to communicate secrets ("credentials") to TPMs.
+for [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) /
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+to allow the TPM-using application to get the plaintext if and only if
+(IFF) the plaintext cryptographically names an object that the
+application has access to.  This is used to remotely communicate secrets
+("credentials") to TPMs.
 
-There is also a notion of signing keys that can only be used to sign
-PKIX certificates.
+Another operation that a restricted decryption key can perform is
+[`TPM2_Import()`](/TPM-Commands/TPM2_Import.md), which decrypts a key
+wrapped to the given decrypt-only key and outputs a file that can be
+loaded with [`TPM2_Load()`](/TPM-Commands/TPM2_Load.md).  The wrapped
+key payload given to [`TPM2_Import()`](/TPM-Commands/TPM2_Import.md) too
+has a particular structure and is produced by a remote peer using
+[`TPM2_Duplicate()`](/TPM-Commands/TPM2_Duplicate.md).
+
+To recap, a restricted decryption key can only be used to:
+
+ - "activate credentials" (made with
+   [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md))
+
+ - receive wrapped keys sent by a peer (made with
+   [`TPM2_Duplicate()`](/TPM-Commands/TPM2_Duplicate.md))
 
 ## Attestation
 
@@ -577,19 +771,87 @@ many TPM concepts can be used to great effect:
  - authorization of devices onto a network
  - etc.
 
+## Use Cases (reprise)
+
+### Off-line RTM / TOTP
+
+Use a TPM to generate a time-based one-time (TOTP) password based on
+current time and a seed derived from selected PCR values, then display
+this TOTP.  A user can then check that the TOTP presented by the device
+matches the TOTP on a separate authenticator.
+
+Links:
+
+ - https://github.com/tpm2-software/tpm2-totp
+ - https://github.com/mjg59/tpmtotp
+ - https://trmm.net/Tpmtotp/
+
+### Online RTM (aka Attestation)
+
+See [our tutorial on attestation](/Attestation/README.md).
+
+### Encrypted Storage
+
+ - [Safeboot](https://safeboot.dev/)
+ - [Hacking with a TPM](https://c3media.vsos.ethz.ch/congress/2019/slides-pdf/36c3-10564-hacking_with_a_tpm.pdf)
+
+### HSM / CA / Smartcard
+
+Use `TPM2_Sign()` or `TPM2_CertifyX509()` to sign certificates with a
+TPM-resident key that is fixedTPM and fixedParent.
+
+Use `TPM2_GetCommandAuditDigest()` to implement an audit trail for the
+CA.
+
+### Authentication and Authorization of Console and/or Remote User Logins
+
+Use [TPM policies](#Authentication-and-Authorization).
+
+### Entropy Source
+
+See our tutorial on [TPM-based RNGs](/Random_Number_Generator/README.md).
+
+### Cryptographic Co-Processor
+
+Use cryptographic primitives provided by the TPM using unrestricted key
+objects:
+
+ - use TPM cryptographic primitives commands directly -- see
+   [TCG TPM 2.0 Library part 3: Commands, sections 14 and 15](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part3_Commands_pub.pdf)
+
+ - use PKCS#11 with a TPM-backed token provider:
+    - https://github.com/tpm2-software/tpm2-pkcs11
+    - https://docs.oracle.com/cd/E36784_01/html/E37121/gmsch.html
+    - https://incenp.org/notes/2020/tpm-based-ssh-key.html
+    - http://trousers.sourceforge.net/pkcs11.html
+    - https://www.lorier.net/docs/tpm
+
+ - use OpenSSL with a PKCS#11 `ENGINE` (see above)
+
+ - use OpenSSL with a TPM `ENGINE`
+    - https://github.com/tpm2-software/tpm2-tss-engine
+
 # Other Resources
 
-[A Practical Guide to TPM 2.0](https://trustedcomputinggroup.org/resource/a-practical-guide-to-tpm-2-0/)
-is an excellent book that informed much of this tutorial.
+ - [A Practical Guide to TPM 2.0](https://trustedcomputinggroup.org/resource/a-practical-guide-to-tpm-2-0/)
+   is an excellent book that informed much of this tutorial.
 
-Nokia has a [TPM course](https://github.com/nokia/TPMCourse/tree/master/docs).
+ - Of course, there is the [TPM.dev community](https://developers.tpm.dev/),
+   which has many resources, posts, a chat room, and knowledgeable
+   participants.
 
-The TCG has a number of members-only tutorials, but it seems that it is
-possible to be invited to be a non-fee paying member.
+ - Nokia has a [TPM course](https://github.com/nokia/TPMCourse/tree/master/docs).
 
-Core TCG TPM specs:
+ - [Hacking with a TPM](https://c3media.vsos.ethz.ch/congress/2019/slides-pdf/36c3-10564-hacking_with_a_tpm.pdf).
 
- - [TCG TPM 2.0 Library part 1: Architecture](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf).
- - [TCG TPM 2.0 Library part 2: Structures](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part2_Structures_pub.pdf).
- - [TCG TPM 2.0 Library part 3: Commands, section 12](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part3_Commands_pub.pdf).
- - [TCG TPM 2.0 Library part 3: Commands Code, section 12](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part3_Commands_code_pub.pdf).
+ - [Microsoft has solid TPM resources](https://docs.microsoft.com/en-us/windows/security/information-protection/tpm/trusted-platform-module-top-node).
+
+ - The TCG has a number of members-only tutorials, but it seems that it
+   is possible to be invited to be a non-fee paying member.
+
+ - Core TCG TPM specs:
+
+    - [TCG TPM 2.0 Library part 1: Architecture](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf).
+    - [TCG TPM 2.0 Library part 2: Structures](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part2_Structures_pub.pdf).
+    - [TCG TPM 2.0 Library part 3: Commands](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part3_Commands_pub.pdf).
+    - [TCG TPM 2.0 Library part 3: Commands Code](https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part3_Commands_code_pub.pdf).
