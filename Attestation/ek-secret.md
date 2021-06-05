@@ -1,17 +1,105 @@
-# `Passing a secret to a TPM using only the EK`
+# Passing a secret to a TPM using only the public key of Endorsement Key (EK)
 
-This is example code to pass a secret to a system by just knowing the endorsenment key.
+This is example code to pass a secret to a system by just knowing its endorsenment key's public key.
 We will be using the current (commit 07a92e9fa75548ea102ce90b3b6182093b3f7a73 or later) master branch of https://github.com/tpm2-software/tpm2-pytss
 
 The terms for the systems are `client`, the system we want to pass the secret to and `server`, the system which has the secret but doesn't need a TPM.
 One assumtion that will be made is that you already have the EKpub for the remote system on the local system, and trust it.
 While we will use the EK in this guide any key accepted by ActivateCredential should work.
 
+## Background
+
+What we want is something akin to asymmetric encryption, with the local
+system encrypting to the public key of the remote system.  The local
+system would send the ciphertext to the remote system, and the remote
+system would decrypt it using its private key.
+
+The TPM does support plain asymmetric decryption using
+`TPM2_RSA_Decrypt()`.  However, the `EK` is a [restricted
+key](/Intro/README.md#Restricted-Cryptographic-Keys), specifically a
+[restricted decryption key](/Intro/README.md#Restricted-Decryption-Keys)
+which means that `TPM2_RSA_Decrypt()` will not work.
+
+The TPM supports two constrained asymmetric decryption operations with
+[restricted decryption
+keys](/Intro/README.md#Restricted-Decryption-Keys):
+
+ - [`TPM2_Import()`](/TPM-Commands/TPM2_Import.md)
+ - [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+
+The sender sides of those two functions are, respectively:
+
+ - [`TPM2_Duplicate()`](/TPM-Commands/TPM2_Duplicate.md)
+ - [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md)
+
+`TPM2_Duplicate()`/`TPM2_Import()` are specifically about sharing
+private key objects from one TPM to another.  We won't use those here.
+
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) allows
+us to encrypt a small secret (e.g., an AES key) to a remote system's
+`EKpub`, and then the remote system can decrypt that with its `EK` using
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md).
+
+The key background concepts here are:
+
+ - [restricted decryption keys](/Intro/README.md#Restricted-Decryption-Keys),
+ - and access controlled decryption with restricted decryption keys.
+
+Most importantly,
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) allows
+the sender to specify an authorization policy that the caller of
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+must meet in order for it to be willing to decrypt the ciphertext.
+
+> Note that `TPM2_MakeCredential()` can be implemented entirely in
+> software.
+
+> Note that duplicating a key that is fixed to TPMs requires using
+> `TPM2_Duplicate()` on that TPM, otherwise if the key is not fixed to
+> the TPM then `TPM2_Duplicate()` can be implemented in software.
+
 ## Concept
-The concept is that the key being activated by a call to ActivateCredential on the remote system doesn't have to be generated on the TPM, as long as the public and private parts are loaded it will succeed.
-By generating a temporary key pair on the local system we can run MakeCredential with the remote system EK, name of the locally generated key and the secret.
+
+`TPM2_MakeCredential()` requires three inputs.  Besides the target's
+`EKpub` and the small secret to send to it, `TPM2_MakeCredential()` also
+requires the [cryptographic name](/Intro/README.md#Cryptographic-Object-Naming)
+of a key object that must reside on the target system's TPM -- this is
+known as the _activation object_.
+
+The key insight is that the actual public key of the object named by the
+activation object name input of `TPM2_MakeCredential()` is not used at
+all.  Neither does `TPM2_ActivateCredential()` use the private key of
+that object.  The only things that matter about the activation object
+are that:
+
+a) it must exist on the target system,
+b) its cryptographic name must be the same as was used on the sender side,
+c) and that the caller of `TPM2_ActivateCredential()` must satisfy the activation object's [_authorization policy_](/Intro/README.md#Policies) (_if_ `adminWithPolicy` is set as an attribute of the activation object).
+
+> NOTE: The cryptographic name of an object binds the authorization
+> policy set on that object.  Therefore the caller of
+> `TPM2_MakeCredential()` specifies an authorization policy that the
+> caller of `TPM2_ActivateCredential()` must meet if the
+> `adminWithPolicy` attribute is set on the activation object.
+
+> NOTE: Learn more about [restricted keys](/Intro/README.md#Restricted-Cryptographic-Keys),
+> [authorization policies](/Intro/README.md#Policies), and
+> user roles in our [introductory tutorial](/Intro/README.md).
+
+Since the private and public key parts of the activation object are not
+used and are irrelevant, they can even be fixed and published for all to
+see, even the private key.
+
+By using a well-known activation key we can avoid having to know the
+cryptographic name of some unique object on the remote system's TPM!
+
+Or we can generate a unique key but send its private part in the clear
+to the remote system.
+
+Thus we need only know the target system's TPM's `EKpub`.
 
 ## server script
+
 ```python
 #!/usr/bin/python3
 
@@ -79,6 +167,7 @@ credlob: where to save the encrypted credential generated by MakeCredential
 secret: where to save the encrypted secret generated by MakeCredential
 
 ## client script
+
 ```python
 #!/usr/bin/python3
 
@@ -171,5 +260,136 @@ temp-sensitive: the temp-sensitive output from the local system script
 credblob: the credblob output from the local system script
 secret: the secret output from the local system script
 
+## Example (bash)
+
+This example uses two bash scripts:
+
+ - [`send-to-tpm.sh`](send-to-tpm.sh)
+ - [`tpm-receive.sh`](tpm-receive.sh)
+
+Usage messages for those two scripts:
+
+```
+Usage: send-to-tpm.sh EK-PUB-FILE SECRET-FILE OUT-FILE [POLICY-CMD [ARGS [\; ...]]]
+       send-to-tpm.sh -P well-known-key-name EK-PUB-FILE SECRET-FILE OUT-FILE
+
+    Options:
+
+     -h         This help message.
+     -P WKname  Use the given cryptographic name binding a policy for
+                recipient to meet.
+     -f         Overwrite OUT-FILE.
+     -x         Trace this script.
+```
+
+```
+Usage: receive.sh CIPHERTEXT-FILE OUT-FILE [POLICY-CMD [ARGS] [;] ...]
+
+  "Activates" (decrypts) CIPHERTEXT-FILE made with TPM2_MakeCredential and
+  writes the plaintext to OUT-FILE.
+
+  The POLICY-CMD and arguments are one or more commands that must
+  leave a policy digest in a file named 'policy' in the current
+  directory (which will be a temporary directory).
+
+    Options:
+
+     -h         This help message.
+     -f         Overwrite OUT-FILE.
+     -x         Trace this script.
+```
+
+Example (without policy, both scripts running on the same system):
+
+```
+: ; # NOTE: The shell prompt ($PS1) is set to ': ; ' to make it easy to
+: ; # cut-and-paste.
+: ; 
+: ; # Get the EKpub:
+: ; tpm2 createek --ek-context ek.ctx --public ek.pub
+: ; 
+: ; # Make a small secret:
+: ; echo hello world > secret.txt
+: ; 
+: ; # Make ciphertext:
+: ; /tmp/send-to-tpm.sh -f ek.pub /tmp/secret /tmp/cipher
+: ; 
+: ; # Decrypt ciphertext:
+: ; /tmp/receive.sh -f /tmp/cipher /tmp/plain
+name:
+000b9f40e7a7a85bcc39bba777b7eda5764d91a28512d91d395ca114b14621ae321e
+837197674484b3f81a90cc8d46a5d724fd52d76e06520b64f2a1da1b331469aa
+certinfodata:68656c6c6f20776f726c640a
+: ; 
+: ; # Show plaintext:
+: ; cat /tmp/plain
+hello world
+```
+
+Example (with policy, both scripts running on the same system):
+
+```
+: ; # NOTE: The shell prompt ($PS1) is set to ': ; ' to make it easy to
+: ; # cut-and-paste.
+: ; 
+: ; # Get the EKpub:
+: ; tpm2 createek --ek-context ek.ctx --public ek.pub
+: ; 
+: ; # Make a small secret:
+: ; echo hello world > secret.txt
+: ; 
+: ; /tmp/send-to-tpm.sh -f ek.pub /tmp/secret /tmp/cipher \
+>     tpm2 policysecret --session session.ctx \
+>                       --object-context endorsement -L policy \; \
+>     tpm2 policycommandcode -S session.ctx -L policy \
+>                            TPM2_CC_ActivateCredential
+837197674484b3f81a90cc8d46a5d724fd52d76e06520b64f2a1da1b331469aa
+cd9917cf18c3848c3a2e606986a066c68142f9bc2710a278287a650ca3bbf245
+: ; 
+: ; /tmp/tpm-receive.sh -f /tmp/cipher /tmp/plain \
+>     tpm2 policysecret --session session.ctx \
+                        --object-context endorsement \
+                        -L policy \; \
+      tpm2 policycommandcode -S session.ctx -L policy \
+                             TPM2_CC_ActivateCredential
+837197674484b3f81a90cc8d46a5d724fd52d76e06520b64f2a1da1b331469aa
+cd9917cf18c3848c3a2e606986a066c68142f9bc2710a278287a650ca3bbf245
+name: 000bec987554f57b9918285794542c05549aa778832be169351494066907d6d95abf
+837197674484b3f81a90cc8d46a5d724fd52d76e06520b64f2a1da1b331469aa
+837197674484b3f81a90cc8d46a5d724fd52d76e06520b64f2a1da1b331469aa
+cd9917cf18c3848c3a2e606986a066c68142f9bc2710a278287a650ca3bbf245
+certinfodata:68656c6c6f20776f726c640a
+: ; cat /tmp/plain
+hello world
+: ;
+```
+
+You can pass policy commands to the `send-to-tpm.sh` and `tpm-receive.sh`
+commands as arguments, with multiple policy commands separated by a
+single semi-colon (quoted, to avoid evaluation by the shell):
+
+```bash
+send-to-tpm.sh ek.pub /tmp/secret /tmp/cipher \
+          tpm2 policypcr -S session.ctx -l "sha256:0,1,2,3" -f $PWD/pcr.dat \
+                         -L policy \; \
+          tpm2 policycommandcode -S session.ctx -L policy TPM2_CC_ActivateCredential
+```
+
 ## Issues
-there is no TPM based protection against replay attacks in this example
+
+ - The secret sent this way has to be small: no larger than the digest
+   size for the digest algorithm being used.
+
+   If the application needs to send larger secrets, then it should
+   generate an AES key and send that as the small secret, then encrypt
+   the larger secret in the AES key and send that ciphertext.  (But
+   don't forget to also include an HMAC or MAC of the ciphertext to make
+   detection of errors / tampering possible.)
+
+ - There is no protection against replay attacks in this example.
+
+   Replay protection can be added by adding a timestamp to the secret
+   data, and by using a replay cache on the remote system.
+
+ - There is no authentication of the sender.  To authenticate the sender
+   simply add a digital signature of the ciphertext.
