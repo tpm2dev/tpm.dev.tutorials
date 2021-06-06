@@ -534,6 +534,87 @@ loaded and unloaded as needed) that represents the current policy
 construction or evaluation hash extension digest (the `policyDigest`),
 and the objects that have been granted access.
 
+Alternatively a session can be for encryption of command inputs/outputs,
+which is useful when the path to the TPM is not secure.
+
+### Authorization Roles
+
+How a TPM authorizes some particular command and its use of its input
+handles varies by command and according to two attributes of the objects
+identified by the command's input handles.
+
+A "role" is really a set of rules that will be applied to authorization
+for a given object/command.
+
+There are three types of authorization roles that can apply in any case:
+
+ - `USER` role
+
+   This means that if the object in question has an `authValue` set, and
+   it has the `userWithAuth` attribute set, then the application can get
+   access by demonstrating knowledge of the corresponding password.  And
+   anyways, if the object has a policy then the user can get access by
+   satisfying the policy even w/o knowing the password.
+
+   This is the most commonly applied authorization role.
+
+ - `ADMIN` role
+
+   This means that if the object in question has an `authValue` set, and
+   it has the `adminWithPolicy` attribute _not_ set, then the
+   application can get access by demonstrating knowledge of the
+   corresponding password or by satisfying its `authPolicy` if one is
+   set.  But if the object has a policy and the `adminWithPolicy`
+   attribute set then the user _must_ satisfy the policy to get access.
+
+   In the `adminWithPolicy` attribute set case, the caller _must_ also
+   have called `TPM2_PolicyCommandCode()` with the code of the command
+   that the caller wishes to execute.
+
+   Only three commands apply `ADMIN` role to any of the objects
+   identified by their input handle parameters:
+
+    - `TPM2_Certify()` requires `ADMIN` role for its `objectHandle`
+      input parameter.
+
+      Whereas the `signHandle` input parameter requires `USER` role.
+
+    - `TPM2_ActivateCredential()` requires `ADMIN` role for its
+      `activateHandle` input parameter.
+
+      Whereas the `keyHandle` input parameter requires `USER` role.
+
+    - `TPM2_ObjectChangeAuth()` requires `ADMIN` role for its
+      `objectHandle` input parameter.
+
+ - `DUP` role
+
+   This is just for the
+   [`TPM2_Duplicate()`](/TPM-Commands/TPM2_Duplicate.md) command.  The
+   caller of `TPM2_Duplicate()` must satisfy the key object's
+   `authPolicy`, and must have called `TPM2_PolicyCommandCode()` with
+   the code of the `TPM2_Duplicate()` command (`TPM_CC_Duplicate`).
+
+   > `DUP` is very similar to `ADMIN` when the `adminWithPolicy`
+   > attribute is set.
+
+For example, the
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+command requires `USER` role for the `keyHandle` input and `ADMIN` role
+for the `activateHandle`.  If the `keyHandle` is the `EK`, then since
+the `EK` has a default `authValue`, use will be allowed.  If the
+`activateHandle` is for an object with an `authPolicy` and the
+`adminWithPolicy` attribute set, then the caller must execute that
+policy's commands (yielding, on success, a session whose `policyDigest`
+matches that object's `authPolicy`) and must have called
+`TPM2_PolicyCommandCode(TPM_CC_ActivateCredential)` on that same
+session.
+
+> NOTE: Every handle argument to a TPM command can require its own
+> authorization, therefore there can be zero, one, or two authorization
+> sessions as inputs to any TPM command (some TPM commands have no input
+> handle parameters, some have one, and some have two).
+
 ## Restricted Cryptographic Keys
 
 Cryptographic keys can either be unrestricted or restricted.
