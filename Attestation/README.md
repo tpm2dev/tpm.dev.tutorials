@@ -1,6 +1,7 @@
 # What Attestation is
 
-A computer can use a TPM to demonstrate:
+An [enrolled device](/Enrollment/README.md) can use a TPM to
+demonstrate:
 
  - possession of a valid TPM
 
@@ -819,6 +820,11 @@ We'll discuss two ways to do this:
    policy could require that some non-resettable application PCR have
    the value zero so that extending it can disable use of
    `TPM2_MakeCredential()` post-boot.
+
+   We have two sample bash scripts demonstrating this approach:
+
+    - [`send-to-tpm.sh`](/Enrollment/send-to-tpm.sh)
+    - [`tpm-receive.sh`](/Enrollment/tpm-receive.sh)
 
  - use an `LTAK` -- a long-term `AK`
 

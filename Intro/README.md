@@ -606,6 +606,9 @@ other state.  TPM commands may check that an authorization session's
 state satisfies the requirements for use of the argument objects passed
 to the commands.
 
+> NOTE: Every command input parameter that is a handle that requires
+> authorization must have its own session associated with it.
+
 ### Authorization Session State
 
 Authorization sessions have a number of state attributes.  Some of these
@@ -688,13 +691,89 @@ ways.  These state attributes are:
 
 ### Encryption Sessions
 
-> Work in progress.
-
 Sessions can also be used for encrypting TPM command arguments and
 results.  This can be useful when one does not trust the path to the
 TPM, such as when the TPM is remote.
 
-> TODO: Discuss key exchange options, etc.
+Only the first input parameter of a TPM command will be encrypted, and
+only the first output parameter of a TPM command will be encrypted, and
+that only if when that first parameter is of type `TPM2B`.  Those first
+`TPM2B` type command input and/or output parameters will be encrypted
+with a symmetrict AES key derived from a secret key established via RSA
+key transport or ECDH key agreement.
+
+> Encryption sessions are useful for when the path to a TPM is not
+> trused, such as when a TPM is a remote TPM, or when otherwise the path
+> to the TPM is not trusted.
+
+### Key Exchange for Encryption Sessions
+
+> Encryption sessions are useful for when the path to a TPM is not
+> trused, such as when a TPM is a remote TPM, or when otherwise the path
+> to the TPM is not trusted.  This section talks about key exchange for
+> such situations.
+
+The symmetric keys used for TPM command encryption are exchanged at
+session creation time.
+
+Keys can be provided by one of either RSA key transport or ECC key
+agreement, and/or the secret `authValue` of a loaded entity.
+
+Sessions are created with
+[`TPM2_StartAuthSession()`](/TPM-Commands/TPM2_StartAuthSession.md),
+which has serveral _optional_ input and output parameters related to
+session encryption.  In particular it provides ways to create a session
+key for command parameter encryption:
+
+ - RSA key transport
+
+   The caller can encrypt a secret to a public key for which the TPM has
+   loaded the private key as identified by the `tpmKey` input parameter
+   of [`TPM2_StartAuthSession()`].
+
+ - ECDH key agreement
+
+   The caller can generate an ephemeral ECDH key and use it with the
+   public key of the ECDH key object identified by the `tpmKey` input
+   parameter of [`TPM2_StartAuthSession()`].  The TPM will use the
+   private key of the object identified by the `tpmKey` input parameter
+   and the ephemeral public key sent by the caller in the
+   `encryptedSalt` input parameter.
+
+ - use the `authHash` of the entity identified by the `bind` input
+   parameter
+
+The caller computes the same session key as the TPM.
+
+To authenticate the TPM and prevent active attacks, the caller of
+`TPM2_StartAuthSession()` should use an `EK` as the `tpmKey` and its
+`EKpub` to locally compute the session key.  Alternatively the caller
+can use a non-`EK` key object created over an earlier encrypted session
+that authenticated the target TPM.
+
+> A non-null `bind` parameter can be used to create a "bound" session
+> that can be used to satisfy HMAC-based authorization for specific
+> objects.  We will not cover this in detail here.
+
+### HMAC Sessions
+
+An HMAC session proves the caller knows the `authValue` secret of some
+entity.  This functions a lot like a password, with the `authValue`
+used to compute HMACs that prove possession, but with the `authValue`
+generally being large and randomly generated, thus much stronger than a
+password.
+
+Typically the `authValue` of some entity should be sent encrypted to the
+TPM when creating an entity, with [the encrypted session being keyed via
+RSA key transport or ECDH](#Key-Exchange-for-Encryption-Sessions).  This
+way an `authValue`, though a simple, password-like binary string, can be
+strong and secure due to being large, randomly chosen and sent over
+an encrypted session.
+
+### Password Sessions
+
+> WIP [Say something about passwords and password sessions, besides
+> "don't use them" and "support remains mostly for TPM 1.2 reasons".]
 
 Alternatively a session can be for encryption of command inputs/outputs,
 which is useful when the path to the TPM is not secure.

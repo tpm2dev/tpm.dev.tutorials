@@ -38,7 +38,7 @@ device using only that information.
  - encrypted filesystems?
  - device credentials?  (e.g., TLS server certificates, Kerberos keys ["keytabs"], etc.)
 
-# Secrets Transport
+# Secrets Long-Term Storage and Transport
 
 Every time an enrolled device reboots, or possibly more often, it may
 have to connect to an attestation server to obtain secrets from it that
@@ -46,8 +46,95 @@ the device needs in order to proceed.  For example, filesystem
 decryption keys, general network access, device authentication
 credentials, etc.
 
-See [attestation](/Attestation/README.md) for details of how to
-transport secrets onto an enrolled device post-enrollment.
+See [attestation](/Attestation/README.md#Secret-Transport-Sub-Protocols)
+for details of how to store and transport secrets onto an enrolled
+device post-enrollment.
+
+## Encrypt-to-TPM Sample Scripts
+
+A pair of scripts are included here to demonstrate how to make long-term
+secrets encrypted to TPMs for use in
+[attestation](/Attestation/README.md) protocols.  The method used is the
+one described in the [attestation
+tutorial](/Attestation/README.md#Secret-Transport-Sub-Protocols) using
+[`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) and
+[`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+with a hard-coded, _well-known_ activation key (`WK`) to implement
+encryption-to-`EKpub` with (optional) sender-asserted authorization
+policy:
+
+ - [`send-to-tpm.sh`](send-to-tpm.sh)
+ - [`tpm-receive.sh`](tpm-receive.sh)
+
+You can use these scripts like so:
+
+ - without policy:
+
+   ```bash
+   : ; # Make a secret
+   : ; dd if=/dev/urandom of=secret.bin bs=16 count=1
+   : ;
+   : ; # Encrypt the secret to some TPM whose EKpub is in a file named
+   : ; # ek.pub:
+   : ; /safeboot/sbin/send-to-tpm.sh ek.pub secret.bin cipher.bin
+   fd32fa22c52cfc8e1a0c29eb38519f87084cab0b04b0d8f020a4d38b2f4e223e
+   7fdad037a921f7eec4f97c08722692028e96888f0b970dc7b3bb6a9c97e8f988
+   ```
+
+   ```bash
+   : ; # Decrypt the secret:
+   : ; tpm-receive.sh cipher.bin secret.bin
+   fd32fa22c52cfc8e1a0c29eb38519f87084cab0b04b0d8f020a4d38b2f4e223e
+   7fdad037a921f7eec4f97c08722692028e96888f0b970dc7b3bb6a9c97e8f988
+   name: 000be1fe1b777ead331f2da896ced2bf7a3949d732a0c6adf6f0a292567d587c4408
+   837197674484b3f81a90cc8d46a5d724fd52d76e06520b64f2a1da1b331469aa
+   fd32fa22c52cfc8e1a0c29eb38519f87084cab0b04b0d8f020a4d38b2f4e223e
+   7fdad037a921f7eec4f97c08722692028e96888f0b970dc7b3bb6a9c97e8f988
+   certinfodata:b7bd59980628c33a14377d53e165c229
+   : ;
+ - with policy
+
+   ```bash
+   : ; # Make up a policy (here that PCR11 must be unextended):
+   : ; dd if=/dev/zero of=pcr.dat bs=32 count=1
+   : ; policy=(tpm2 policypcr -l sha256:11 -f pcr.dat)
+   : ;
+   : ; send-to-tpm.sh ek.pub secret.bin cipher.bin "${policy[@]}"
+   fd32fa22c52cfc8e1a0c29eb38519f87084cab0b04b0d8f020a4d38b2f4e223e
+   7fdad037a921f7eec4f97c08722692028e96888f0b970dc7b3bb6a9c97e8f988
+   ```
+
+   ```bash
+   : ; # We have to satisfy the same policy on the receive side:
+   : ; policy=(tpm2 policypcr -l sha256:11 -f pcr.dat)
+   : ;
+   : ; tpm-receive.sh -f cipher.bin "${policy[@]}"
+   fd32fa22c52cfc8e1a0c29eb38519f87084cab0b04b0d8f020a4d38b2f4e223e
+   7fdad037a921f7eec4f97c08722692028e96888f0b970dc7b3bb6a9c97e8f988
+   name: 000be1fe1b777ead331f2da896ced2bf7a3949d732a0c6adf6f0a292567d587c4408
+   837197674484b3f81a90cc8d46a5d724fd52d76e06520b64f2a1da1b331469aa
+   fd32fa22c52cfc8e1a0c29eb38519f87084cab0b04b0d8f020a4d38b2f4e223e
+   7fdad037a921f7eec4f97c08722692028e96888f0b970dc7b3bb6a9c97e8f988
+   certinfodata:b7bd59980628c33a14377d53e165c229
+   : ;
+   ```
+
+   Multiple policy commands can be separated with a quoted semi-colon:
+
+   ```bash
+   send-to-tpm.sh ... tpm2 policyblah ... \; policyfoo ...
+   ```
+
+   Multiple policy commands can be separated with a quoted semi-colon:
+
+   ```bash
+   send-to-tpm.sh ... tpm2 policyblah ... \; policyfoo ...
+   ```
+
+   When a policy is specified, these scripts will automatically set the
+   `adminWithPolicy` attribute of the activation object, and will add
+   `tpm2 policycommandcode TPM2_CC_ActivateCredential` to the policy, as
+   that is required for activation objects with `adminWithPolicy` set.
 
 # Enrollment Semantics
 
