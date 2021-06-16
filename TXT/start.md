@@ -277,6 +277,33 @@ You can do some very clever things with keys and data stored in the TPM NVRAM. T
 Also a very good chance of breaking your boot sequence too....but this is what you want in this case :)
 
 
+## Summary Install Sequence
+The above scripts without the text - you might need to change the name of the ACM. Tboot and ACM assumed to be placed in the same directory, eg: `/tmp/tbootinstall` might be a good place.
+
+Installation:
+
+```bash
+gunzip tboot-1.10.2.tar.zip
+tar xvf tboot-1.10.2.tar
+cd tboot-1.10.2
+make
+sudo make install
+sudo /boot/grub/grub.cfg /boot/grub/grub.cfg.working
+sudo grub-mkconfig -o /boot/grub/grub.cfg 
+unzip 6th_7th_gen_i5_i7-SINIT_79.zip
+sudo cp 6th_7th_gen_i5_i7-SINIT_79.bin /boot
+```
+
+Post-Boot Check
+
+```bash
+tpm2_pcrread  sha256:17,18
+sudo ./txt-stat | grep "TXT measured launch"
+sudo ./txt-parse_err 
+
+```
+
+
 ## Anecdotes
 A friend of mine spent a couple of days trying to figure out why a top of the range PC would not perform the DRTM correctly using tboot. Tboot returned lots of odd errors and PCRs 17 and 18 were empty. TPM and TXT *were* enabled in BIOS so that wasn't the problem.
 
