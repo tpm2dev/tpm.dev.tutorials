@@ -2,6 +2,25 @@
 
 This guide gives an overview of how to install tboot for DRTM - dynamic root of trust measurement.
 
+- [Tboot and TXT Installation](#tboot-and-txt-installation)
+  * [Installation](#installation)
+    + [Step 1 - Preliminaries](#step-1---preliminaries)
+    + [Step 2 - Compiling tboot](#step-2---compiling-tboot)
+    + [Step 3 - Grub](#step-3---grub)
+    + [Step 4 - ACM](#step-4---acm)
+    + [Step 5 - Reboot](#step-5---reboot)
+    + [Step 6 - Testing](#step-6---testing)
+  * [Getting Help](#getting-help)
+  * [Tools](#tools)
+    + [txt-stat](#txt-stat)
+    + [txt-parse_err](#txt-parse-err)
+    + [txt-acminfo](#txt-acminfo)
+  * [TPM Operations](#tpm-operations)
+    + [PCR Read](#pcr-read)
+    + [Quoting](#quoting)
+    + [Sealing](#sealing)
+  * [Things Not Described](#things-not-described)
+  * [Anecdotes](#anecdotes)
 
 ## Installation
 
