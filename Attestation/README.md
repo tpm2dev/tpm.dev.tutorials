@@ -97,19 +97,21 @@ For more about enrollment see the tutorial specifically for
  - `SCn` == server-to-client message number `n`
  - `{stuff, more_stuff}` == a sequence of data, a "struct"
  - `{"key":<value>,...}` == JSON text
- - `TPM2_MakeCredential(<args>)` == outputs of calling `TPM2_MakeCredential()` with `args` arguments
- - `TPM2_Certify(<args>)` == outputs of calling `TPM2_Certify()` with `args` arguments
+ - `TPM2_Foo(<args>)` == outputs of calling some TPM 2.0 command with `args` arguments
  - `XK` == `<X>` key, for some `<X>` purpose (the TPM-resident object and its private key)
     - `EK` == endorsement key (the TPM-resident object and its private key)
     - `AK` == attestation key (the TPM-resident object and its private key)
     - `TK` == transport key (the TPM-resident object and its private key)
+    - `WK` == well-known key used only as a `TPM2_ActivateCredential()` activation object, not used for any actual encryption or signing
  - `XKpub` == `<X>`'s public key, for some `<X>` purpose
-    - `EKpub` == endorsement public key
-    - `AKpub` == attestation public key
-    - `TKpub` == transport public key
+    - `EKpub` == `EK` public key
+    - `AKpub` == `AK` public key
+    - `TKpub` == `TK` public key
+    - `WKpub` == `WK` public key
  - `XKname` == `<X>`'s cryptographic name, for some `<X>` purpose
-    - `EKname` == endorsement key's cryptographic name
-    - `AKname` == attestation key's cryptographic name
+    - `EKname` == `EK`'s cryptographic name
+    - `AKname` == `AK`'s cryptographic name
+    - `WKname` == `WK`'s cryptographic name
 
 ## Threat Models
 
@@ -118,6 +120,7 @@ address:
 
  - attestation client impersonation
  - attestation server impersonation
+ - replay attacks
  - unauthorized firmware and/or OS updates
  - theft or compromise of of attestation servers
  - theft of client devices or their local storage (e.g., disks, JBODs)
@@ -264,9 +267,9 @@ endorsement keys.
 
 Let's start with few observations and security considerations:
 
- - Clients need to know which PCRs to quote.  E.g., the [Safe Boot](https://safeboot.dev/)
-   project and the [IBM sample attestation client and server](https://sourceforge.net/projects/ibmtpm20acs/)
-   have the client ask for a list of PCRs and then the client quotes
+ - Clients need to know which PCRs to quote.  E.g.,
+   the [IBM sample attestation client and server](https://sourceforge.net/projects/ibmtpm20acs/)
+   has the client ask for a list of PCRs and then the client quotes
    just those.
 
    But clients could just quote all PCRs.  It's more data to send, but
@@ -279,24 +282,52 @@ Let's start with few observations and security considerations:
    stateless method is to use a timestamp and reject requests with old
    timestamps.
 
- - Replay protection of server to client responses is mostly either not
-   needed or implicitly provided by [`TPM2_MakeCredential()`](TPM2_MakeCredential.md)
-   because `TPM2_MakeCredential()` generates a secret seed that
-   randomizes its outputs even when all the inputs are the same across
-   multiple calls to it.
+   As well, one can use the `resetCount` from the quote to check if an
+   attestation is the first after a reboot or not.  Though this does
+   require that the attestation server maintain some writable state
+   (namely, the reset count.
+
+ - Replay protection of server to client responses is provided by using
+   a different `AK` each time the client attests.  This works because
+   [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) binds
+   the `AK` such that
+   [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+   will not succeed unless the server used the same `AKname` as the name
+   of the `AK` used by the client.
 
  - Ultimately the protocol *must* make use of
    [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md) and
    [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md) in order to
    authenticate a TPM-running host via its TPM's EKpub.
 
+   > The same is not true of [`TPM2_Quote()`](/TPM-Commands/TPM2_Quote.md)
+   > because one can build an attestation protocol that does not depend
+   > on signing quotes.  Essentially one can simply send an unsigned
+   > reading of the client's TPM's PCRs and clock information and use an
+   > activation object with `adminWithPolicy` set and a `policyDigest`
+   > of a policy that uses the `TPM2_PolicyCounterTimer() and
+   > `TPM2_PolicyPCR()` commands to enforce that the `resetCount` and
+   > the PCRs are as asserted in the protocol.  The server can then
+   > construct the same policy to compute the name of the activation
+   > object for
+   > [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md),
+   > knowing that
+   > [`TPM2_ActivateCredential()`](/TPM-Commands/TPM2_ActivateCredential.md)
+   > will enforce that policy.
+
  - Privacy protection of client identifiers may be needed, in which case
-   TLS may be desired.
+   TLS may be desired.  Alternatively, the client could encrypt a
+   session key to a public of the attestation server using
+   [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md), and
+   then use the session key to encrypt confidential parameters, thus
+   building something of a TLS-like protocol.
 
  - Even if a single round trip attestation protocol is adequate, a
    return routability check may be needed to avoid denial of service
    attacks.  I.e., do not run a single round trip attestation protocol
    over UDP without first requiring the client to echo a nonce/cookie.
+
+   Using TCP effectively provides a return routability check.
 
  - Statelessness on the server side is highly desirable, as that should
    permit having multiple servers and each of a client's messages can go
@@ -308,14 +339,20 @@ Let's start with few observations and security considerations:
    protocol messages could all be idempotent and therefore map well onto
    HTTP `GET` requests but for the fact that all the things that may be
    have to be sent may not fit on a URI local part or URI query
-   parameters, therefore HTTP `POST` is the better option.
+   parameters (and `GET` has no request body), therefore HTTP `POST` is
+   needed for its ability to send a request body.
 
 ### Error Cases Not Shown
 
 Note that error cases are not shown in the protocols described below.
 
 Naturally, in case of error the attestation server will send a suitable
-error message back to the client.
+error message back to the client.  Providing integrity protection for
+error messages is tricky, as there will always be some kinds of errors
+for which integrity protection cannot be provided, but also, there is no
+natural key with which to sign errors.  An actual attestation protocol
+specification may require that clients know a public key that the server
+can use to sign its errors with.
 
 ### Databases, Log Sinks, and Dashboarding / Alerting Systems Not Shown
 
@@ -386,12 +423,12 @@ The client obtains those items IFF (if and only if) the AK is resident
 in the same TPM as the EK, courtesy of `TPM2_ActivateCredential()`'s
 semantics.
 
-NOTE well that in single round trip attestation protocols using only
-decrypt-only EKs it is *essential* that the AKcert not be logged in any
-public place since otherwise an attacker can make and send `CS0` using a
-non-TPM-resident AK and any TPM's EKpub/EKcert known to the attacker,
-and then it may recover the AK certificate from the log in spite of
-being unable to recover the AK certificate from `SC1`!
+> NOTE well that in single round trip attestation protocols using only
+> decrypt-only EKs it is *essential* that the AKcert not be logged in
+> any public place since otherwise an attacker can make and send `CS0`
+> using a non-TPM-resident AK and any TPM's EKpub/EKcert known to the
+> attacker, and then it may recover the AK certificate from the log in
+> spite of being unable to recover the AK certificate from `SC1`!
 
 Alternatively, a single round trip attestation protocol can be
 implemented as an optimization to a two round trip protocol when the AK
@@ -406,6 +443,13 @@ database:
   SC0:  {TPM2_MakeCredential(EKpub, AKpub, session_key),
          Encrypt_session_key({AKcert, filesystem_keys, etc.})}
 ```
+
+> NOTE: persisting the `AK` means that the `AK` must not have `stClear`
+> set, which in turn means that it can be used and reused across
+> reboots, so detecting reboots requires more mutable, synchronized
+> state on the server to keep track of clients' `resetCount`s.  Mutable,
+> synchronized state complicates distributed databases, so it may not be
+> desirable.
 
 ### Three-Message Attestation Protocol Patterns
 
@@ -427,13 +471,13 @@ desirable anyways for monitoring and alerting purposes.
 (In this diagram we show the use of a TPM simulator on the server side
 for implementing [`TPM2_MakeCredential()`](/TPM-Commands/TPM2_MakeCredential.md).)
 
-NOTE well that in this protocol, like single round trip attestation
-protocols using only decrypt-only EKs, it is *essential* that the AKcert
-not be logged in any public place since otherwise an attacker can make
-and send `CS0` using a non-TPM-resident AK and any TPM's EKpub/EKcert
-known to the attacker, and then it may recover the AK certificate from
-the log in spite of being unable to recover the AK certificate from
-`SC1`!
+> NOTE well that in this protocol, like single round trip attestation
+> protocols using only decrypt-only EKs, it is *essential* that the
+> AKcert not be logged in any public place since otherwise an attacker
+> can make and send `CS0` using a non-TPM-resident AK and any TPM's
+> EKpub/EKcert known to the attacker, and then it may recover the AK
+> certificate from the log in spite of being unable to recover the AK
+> certificate from `SC1`!
 
 If such a protocol is instantiated over HTTP or TCP, it will really be
 more like a two round trip protocol:
@@ -575,20 +619,39 @@ to two round trips.
 
 ### Actual Protocols: safeboot.dev
 
+[Safeboot.dev](https://safeboot.dev) uses a single round trip stateless
+attestation protocol, with a separate, one-time enrollment protocol.
+
 ```
-  CS0:  <empty>
-  SC0:  nonce, PCR_list
-  CS1:  [ID], EKpub, [EKcert], AKpub, PCRs, eventlog, nonce,
+  CS0:  [ID], EKpub, [EKcert], AKpub, PCRs, eventlog, timestamp,
         TPM2_Quote(AK, PCRs, extra_data)=Signed_AK({hash-of-PCRs, misc, extra_data})
-  SC1:  {TPM2_MakeCredential(EKpub, AKpub, session_key),
-         Encrypt_session_key({filesystem_keys})}
+  SC0:  {TPM2_MakeCredential(EKpub, AKpub, session_key),
+         Encrypt_session_key({long-term-secrets-encrypted-to-EKpub})}
+
+    with
+
+      long-term-secrets-encrypted-to-EKpub =
+          [{TPM2_MakeCredential(EKpub, WKname(policy), aes_key0),
+            Encrypt_aes_key0(secret0)},
+           {TPM2_MakeCredential(EKpub, WKname(policy), aes_key1),
+            Encrypt_aes_key1(secret1)},
+           ..,
+           {TPM2_MakeCredential(EKpub, WKname(policy), aes_keyN),
+            Encrypt_aes_key1(secretN)}]
 ```
 
-Nonce validation is currently not well-developed in Safeboot.
-If a timestamp is used instead of a nonce, and if the client assumes all
-PCRs are desired, then this becomes a one round trip protocol.
+During an initial enrollment step, the enrollment server can create any
+number of secrets to deliver to the client later:
 
-An AKcert will be added to the Safeboot protocol soon.
+ - local storage / filesystem keys
+
+ - private keys and certificates (PKIX, OpenSSH)
+
+ - OpenSSH host keys
+
+ - Kerberos keys
+
+ - etc.
 
 ## Attestation Protocol Patterns and Actual Protocols (signing-only EKs)
 
@@ -762,7 +825,7 @@ would not be performant if, for example, those secrets are being used to
 encrypt filesystems.  We must inherently trust the client to keep those
 secrets safe when running.
 
-## Break-Glass Recovery
+## Break-Glass Recovery and Escrow
 
 For break-glass recovery, the simplest thing to do is to store
 `Encrypt_backupKey({EKpub, hostname, secrets})`, where `backupKey` is an
