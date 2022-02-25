@@ -67,7 +67,7 @@ print("att=",att)
 # We construct an encoder and encode that structure in a python dict
 #
 
-enc = json_encdec() 
+enc = json_encdec()
 ae = enc.encode(att)
 print("ae=",type(ae),"\n",ae)
 
@@ -77,3 +77,23 @@ print("ae=",type(ae),"\n",ae)
 
 js = json.dumps(ae,indent=4)
 print("\n",js)
+
+
+#
+# Now we'll do the same, except we'll generate the nonce using the TPM's random number generator
+#
+
+r = tpm.get_random( 8 )
+
+extradata_to_use = TPM2B_DATA(str(r))
+
+print("\nWith randomly generated extra data: ",str(r))
+
+quote,signature = tpm.quote(
+	  handle, pcrsels, extradata_to_use
+	)
+
+att,_ = TPMS_ATTEST.unmarshal( bytes(quote) )
+enc = json_encdec()
+ae = enc.encode(att)
+print("ae2=",type(ae),"\n",ae)
