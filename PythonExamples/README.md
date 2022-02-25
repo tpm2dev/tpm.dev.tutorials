@@ -14,4 +14,4 @@ Each example can be run just by typing `python3 example.py`
 
 Each example has an accompanying description as markdown file, plus annotated code.
 
-   * [quote](/quote.md)
+   * [quote](quote.md)
