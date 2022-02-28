@@ -305,7 +305,7 @@ Let's start with few observations and security considerations:
    > on signing quotes.  Essentially one can simply send an unsigned
    > reading of the client's TPM's PCRs and clock information and use an
    > activation object with `adminWithPolicy` set and a `policyDigest`
-   > of a policy that uses the `TPM2_PolicyCounterTimer() and
+   > of a policy that uses the `TPM2_PolicyCounterTimer()` and
    > `TPM2_PolicyPCR()` commands to enforce that the `resetCount` and
    > the PCRs are as asserted in the protocol.  The server can then
    > construct the same policy to compute the name of the activation
