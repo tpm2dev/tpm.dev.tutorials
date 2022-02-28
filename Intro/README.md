@@ -381,15 +381,15 @@ used to authenticate the TPM's legitimacy.  The EK's public key
 ("EKpub") can be used to uniquely identify a TPM, and possibly link to
 the platform's, and even the platform's user(s)' identities.
 
-The [`TPM2_CreatePrimary()`](TPM2_CreatePrimary.md) command creates
+The [`TPM2_CreatePrimary()`](/TPM-Commands/TPM2_CreatePrimary.md) command creates
 primary key objects deterministically from the hierarchy's seed and the
 "template" used to create the key (which includes a "unique" area that
 provides "entropy" to the key derivation function).
 
-The [`TPM2_Create()`](TPM2_Create.md) command creates a ordinary
+The [`TPM2_Create()`](/TPM-Commands/TPM2_Create.md) command creates a ordinary
 objects.
 
-The [`TPM2_CreateLoaded()`](TPM2_CreateLoaded.md) command can also
+The [`TPM2_CreateLoaded()`](/TPM-Commands/TPM2_CreateLoaded.md) command can also
 create primary key objects deterministically from the hierarchy's seed
 and the "template" used to create the key (which includes a "unique"
 area that provides "entropy" to the key derivation function).
