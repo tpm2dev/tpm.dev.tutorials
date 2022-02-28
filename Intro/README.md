@@ -381,15 +381,15 @@ used to authenticate the TPM's legitimacy.  The EK's public key
 ("EKpub") can be used to uniquely identify a TPM, and possibly link to
 the platform's, and even the platform's user(s)' identities.
 
-The [`TPM2_CreatePrimary()`](TPM2_CreatePrimary.md) command creates
+The [`TPM2_CreatePrimary()`](/TPM-Commands/TPM2_CreatePrimary.md) command creates
 primary key objects deterministically from the hierarchy's seed and the
 "template" used to create the key (which includes a "unique" area that
 provides "entropy" to the key derivation function).
 
-The [`TPM2_Create()`](TPM2_Create.md) command creates a ordinary
+The [`TPM2_Create()`](/TPM-Commands/TPM2_Create.md) command creates a ordinary
 objects.
 
-The [`TPM2_CreateLoaded()`](TPM2_CreateLoaded.md) command can also
+The [`TPM2_CreateLoaded()`](/TPM-Commands/TPM2_CreateLoaded.md) command can also
 create primary key objects deterministically from the hierarchy's seed
 and the "template" used to create the key (which includes a "unique"
 area that provides "entropy" to the key derivation function).
@@ -855,6 +855,15 @@ session.
 > authorization, therefore there can be zero, one, or two authorization
 > sessions as inputs to any TPM command (some TPM commands have no input
 > handle parameters, some have one, and some have two).
+
+### Proving Knowledge of a Shared `authValue`
+
+Each session used in a command can prove the caller's (and TPM's)
+knowledge of the session's `bind` object's `authValue`.  As well, the
+`TPM2_PolicySecret()` command can be used to inject the `authValue` of
+arbitrary objects into the session's state computations, once again
+having the caller prove its knowledge of the `authValue`, and the TPM
+will prove its knowledge of it back to the caller on its response.
 
 ## Restricted Cryptographic Keys
 
