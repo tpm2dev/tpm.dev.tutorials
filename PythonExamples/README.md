@@ -14,6 +14,7 @@ Each example can be run just by typing `python3 example.py`
 
 Each example has an accompanying description as markdown file, plus annotated code.
 
+<<<<<<< HEAD
    * [randomnumber]
    * [quote]
 
@@ -35,3 +36,6 @@ type is  <class 'tpm2_pytss.types.TPM2B_DIGEST'>
 r    is  a10ab7558675a56c
 as hex   11604288967829464428
 ```
+=======
+   * [quote](quote.md)
+>>>>>>> fee864e50cfe60b9578dc5f6732ed343f0246929
