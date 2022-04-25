@@ -1,4 +1,4 @@
-# Quote
+# Get random
 
 This example demonstrates the use of ESAPI.get_random
 
