@@ -16,16 +16,19 @@ Why GitHub?
 
 * [Introduction to TPM Concepts](Intro/README.md)
 * [Random Number Generator](Random_Number_Generator/README.md)
+* [Python examples](PythonExamples/README.md)
 
-### Advanced Use Cases
+### Advanced usage
 
 * [Boot with TPM: Secure vs Measured vs Trusted](Boot-with-TPM/README.md)
 * [Attestation, MakeCredential, ActivateCredential](Attestation/README.md)
+* [Enrollment, Enrollment protocols](Enrollment/README.md)
+* [Tboot and TXT installation](TXT/start.md)
+* [TPM2 Commands explained](TPM-Commands/)
 
 ## Upcomming tutorials
 
 * Localities
-* Remote Attestation protocols
 * Quick setup for TPM.dev courses
 
 ## Contributors
@@ -38,6 +41,8 @@ Why GitHub?
 * Ken Goldman
 * Trammell Hudson
 * Jason Heiss
+* Tobias Schultz
+* Gabriel Kerneis
 
 ## Licensing
 
