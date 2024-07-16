@@ -47,10 +47,10 @@ The second type is measured boot were the assertion comes in the form of measure
 
 The disadvantages are:
 
-1.) outside of a very limited set of solutions, the boot process is not stopped immediately when a bad configuration is loaded
-2.) often local attestation is relied on as the enforcement mechanism and thus susceptible to being defeated by a local entity
-3.) past attestation protocols have been overly complex with little consensus inhibiting adoption
-4.) the lack of open remote attestation solutions.
+1. outside of a very limited set of solutions, the boot process is not stopped immediately when a bad configuration is loaded
+2. often local attestation is relied on as the enforcement mechanism and thus susceptible to being defeated by a local entity
+3. past attestation protocols have been overly complex with little consensus inhibiting adoption
+4. the lack of open remote attestation solutions.
 
 ## Hybrid Solutions
 
