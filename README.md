@@ -46,9 +46,12 @@ Why GitHub?
 
 ## Licensing
 
-Every author has the freedom to decide how their tutorial will be licensed by adding a LICENSE file to their tutorial's subfolder.
+This work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
 
-Otherwise, this work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
+Attribution condition: You must indicate derivative work this way:
+
+"Is derived from TPM.dev tutorials and resources, available at https://tpm.dev”
+
 
 [![CC BY-SA 4.0][cc-by-sa-shield]][cc-by-sa]
 
