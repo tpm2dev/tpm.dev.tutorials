@@ -4,7 +4,7 @@ Last change: 8.June.2026
 
 ## Where things stand today ("Too Long Didn't Read")
 
-1. No discrete hardware TPM ships with PQC capabilities yet. See table with [PQC status](#PQC-status-of-known-TPM-2.0-solutions).
+1. No discrete hardware TPM ships with PQC capabilities yet. See table with [PQC status](#pqc-status-of-known-tpm-20-solutions).
 
     ```TPM developers and system integrators have no PQC-capable discrete silicon to build against today.```
 
@@ -12,7 +12,7 @@ Last change: 8.June.2026
 
     Many new TPM commands are added, some deprecated and detailed table is available below.
 
-3. What is available today. See [PQC-ready TPM 2.0 applications]
+3. What is available today:
 
     Infineon's current generation SLB 9672 / SLB 9673 has PQC protection over *the TPM update channel*: XMSS signatures mean a firmware push to the chip cannot be corrupted by a quantum attacker. That is sound engineering. But the PQC boundary stops at the chip itself. Your application, your attestation flow, your key exchange still run on classical algorithms. Similar is the situation with STMicroelectronics ST33K discrete TPM 2.0 solution.
 
