@@ -24,12 +24,11 @@ wolfSSL's firmware TPM is available now for teams that need to develop and test 
 
 | Vendor / Product | TCG spec | PQC in TPM operations | PQC firmware update mechanism | Status | Notes |
 |---|---|---|---|---|---|
-| Infineon OPTIGA TPM SLB 9672 / SLB 9673 | v1.59 | No | Yes — XMSS | Available | Current gen. PQC protects the update channel, not TPM operations. EAL4+. |
-| Infineon OPTIGA TPM SLB 9678 | v1.85 (planned) | Yes | Yes | Announced | Roadmap confirmed. Designed-in migration path from SLB 9672/9673. |
 | SEALSQ QVault TPM | v1.85 | Yes | Yes | Samples | Full PQC across all TPM functions. FIPS 140-3 and TCG certification in process. |
-| wolfTPM fTPM (wolfSSL) | v1.85 | Yes | N/A — software | Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS 203 / FIPS 204. Not a substitute for discrete hardware in high-assurance environments. |
+| Infineon OPTIGA TPM SLB 9672 / SLB 9673 | v1.59 | No | Yes — XMSS | Available | Current gen. PQC protects the update channel, not TPM operations. EAL4+. |
 | STMicroelectronics ST33K | v1.59 | No | Yes — LMS | Available | Current generation. Firmware image signed with ECDSA and LMS. Same approach as Infineon: PQC protects the update channel, not TPM operations. EAL4+. |
 | Nuvoton NPCT760 | v1.59 | No | No | Available | No public v1.85 PQC roadmap as of Q2 2026. |
+| wolfTPM fTPM (wolfSSL) | v1.85 | Yes | N/A — software | Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS 203 / FIPS 204. Not a substitute for discrete hardware in high-assurance environments. |
 
 Side-note — firmware update algorithm choice: Infineon uses XMSS, ST uses LMS. Both are stateful hash-based signatures standardized under SP800-208. Different parameter choices, same security concept.
 
