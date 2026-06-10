@@ -25,7 +25,7 @@ wolfSSL's firmware TPM is available now for teams that need to develop and test 
 | Vendor / Product | TCG spec | PQC in TPM operations | PQC firmware update mechanism | Status | Notes |
 |---|---|---|---|---|---|
 | SEALSQ QVault TPM | v1.85 | Yes | Yes | Samples | Supports ML-DSA-87 and ML-KEM-1024 for TPM operations.  FIPS 140-3 and TCG certification in process. |
-| Infineon OPTIGA TPM SLB 9678 | v1.85 | Yes | Yes | Upcomming | Designed-in migration path from SLB 9672/9673. |
+| Infineon OPTIGA TPM with PQC | v1.85 | Yes | Yes | Upcomming | Designed-in migration path from SLB 9672/9673. |
 | Infineon OPTIGA TPM SLB 9672 / SLB 9673 | v1.59 | No | Yes — XMSS | Available | Current gen. PQC protects the update channel, not TPM operations. EAL4+. |
 | STMicroelectronics ST33K | v1.59 | No | Yes — LMS | Available | Current generation. Firmware image signed with ECDSA and LMS. Same approach as Infineon: PQC protects the update channel, not TPM operations. EAL4+. |
 | Nuvoton NPCT760 | v1.59 | No | No | Available | No public v1.85 PQC roadmap as of Q2 2026. |
@@ -82,3 +82,4 @@ The specification is real, but the discrete silicon is still catching up.
 That gap matters if you are designing a product today. There are products shipping now that carry PQC marketing. Some of them protect the *firmware update channel* with a post-quantum algorithm. That is not the same thing as exposing post-quantum operations to your application. The distinction is architectural, and the table below makes it explicit.
 
 A TPM with a PQC-protected *firmware update mechanism* means the firmware pushed to the chip is signed with a post-quantum algorithm and protecting the update channel from tampering. It does not mean your application can call the new PQC commands such as `TPM2_Encapsulate` or `TPM2_SignVerifySequenceStart`.
+
