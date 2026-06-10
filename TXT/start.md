@@ -98,7 +98,7 @@ My Ubuntu distribution ships grub-mkconfig, which should be the same as grub2-mk
 
 
 ### Step 4 - ACM
-Tboot requires an Accredited Code Module from Intel. Not all CPUs support TXT - most i5 an i7s do and as far as I have seen Xeons have the ACM already onboard the CPU itself.
+Tboot requires an Authenticated Code Module from Intel. Not all CPUs support TXT - most i5 an i7s do and as far as I have seen Xeons have the ACM already onboard the CPU itself.
 
 The ACMs are available from here: https://software.intel.com/content/www/us/en/develop/articles/intel-trusted-execution-technology.html
 
