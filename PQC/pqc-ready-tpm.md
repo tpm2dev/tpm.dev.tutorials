@@ -27,10 +27,10 @@ wolfSSL's firmware TPM is available now for teams that need to develop and test 
 | Vendor / Product | TCG spec | PQC in TPM ops | PQC FW updates | Status | Notes |
 |---|---|---|---|---|---|
 | SEALSQ QVault TPM | v1.85 | Yes | Yes | 🚀 Samples | Supports ML-DSA-87 and ML-KEM-1024 for TPM operations.  |
-| STMicro ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K TPMs. |
-| New Infineon OPTIGA TPM | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with SLB 9672/9673 TPMs. |
-| New Nuvoton NPCT TPM | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with NPCT 76x TPMs. |
-| wolfTPM firmware TPM (wolfSSL) | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
+| STMicro ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K. |
+| Infineon OPTIGA TPM with PQC | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with SLB 9672/9673. |
+| Nuvoton NPCT TPM with PQC | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with NPCT 76x TPMs. |
+| wolfTPM firmware TPM | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
 
 ### Current Generation TPM 2.0
 
