@@ -22,14 +22,26 @@ wolfSSL's firmware TPM is available now for teams that need to develop and test 
 
 ## PQC status of known TPM 2.0 solutions
 
-| Vendor / Product | TCG spec | PQC in TPM operations | PQC firmware update mechanism | Status | Notes |
+### New Generation PQC TPM
+
+| Vendor / Product | TCG spec | PQC in TPM ops | PQC FW updates | Status | Notes |
 |---|---|---|---|---|---|
-| SEALSQ QVault TPM | v1.85 | Yes | Yes | Samples | Supports ML-DSA-87 and ML-KEM-1024 for TPM operations.  FIPS 140-3 and TCG certification in process. |
-| Infineon OPTIGA TPM with PQC | v1.85 | Yes | Yes | Upcomming | Designed-in migration path from SLB 9672/9673. |
-| Infineon OPTIGA TPM SLB 9672 / SLB 9673 | v1.59 | No | Yes — XMSS | Available | Current gen. PQC protects the update channel, not TPM operations. EAL4+. |
-| STMicroelectronics ST33K | v1.59 | No | Yes — LMS | Available | Current generation. Firmware image signed with ECDSA and LMS. Same approach as Infineon: PQC protects the update channel, not TPM operations. EAL4+. |
-| Nuvoton NPCT760 | v1.59 | No | No | Available | No public v1.85 PQC roadmap as of Q2 2026. |
-| wolfTPM fTPM (wolfSSL) | v1.85 | Yes | N/A — software | Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS 203 / FIPS 204. Not a substitute for discrete hardware in high-assurance environments. |
+| SEALSQ QVault TPM | v1.85 | Yes | Yes | 🚀 Samples | Supports ML-DSA-87 and ML-KEM-1024 for TPM operations.  |
+| STMicro ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K TPMs. |
+| New Infineon OPTIGA TPM | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with SLB 9672/9673 TPMs. |
+| New Nuvoton NPCT TPM | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with NPCT 76x TPMs. |
+| wolfTPM firmware TPM (wolfSSL) | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
+
+### Current Generation TPM 2.0
+
+`PQC protects the update channel, not TPM operations.`
+
+| Vendor / Product | TCG spec | PQC in TPM ops | PQC FW updates | Status |
+|---|---|---|---|---|
+| Infineon Optiga SLB 9672 | v1.59 | No | Yes — XMSS | Available |
+| Infineon Optiga SLB 9673 | v1.59 | No | Yes — XMSS | Available |
+| STMicroelectronics ST33K | v1.59 | No | Yes — LMS | Available |
+| Nuvoton NPCT 760 | v1.59 | No | No | Available | EAL4+. |
 
 Side-note — firmware update algorithm choice: Infineon uses XMSS, ST uses LMS. Both are stateful hash-based signatures standardized under SP800-208. Different parameter choices, same security concept.
 
