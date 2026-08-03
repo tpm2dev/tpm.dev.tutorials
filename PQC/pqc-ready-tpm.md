@@ -1,6 +1,6 @@
 # TPM 2.0 PQC Status as of June 2026
 
-Last change: 10.June.2026
+Last change: 3.August.2026
 
 ## Where things stand today ("Too Long Didn't Read")
 
@@ -19,6 +19,8 @@ Last change: 10.June.2026
 The nearest point on the horizon **based on public information** is SEALSQ, with  [engineering samples targeted for Q3 2026](https://www.sealsq.com/investors/news-releases/sealsq-announces-comprehensive-2026-certification-roadmap-for-qs7001-secure-element-and-qvault-tpm-product-lines).
 
 wolfSSL's firmware TPM is available now for teams that need to develop and test against the v1.85 API before production silicon arrives. wolfTPM is licensed under GPLv2 so it can be used for devleopment but shipping firmware TPM into products requires a commercial license from [wolfSSL](https://www.wolfssl.com/announcing-wolftpm-firmware-tpm-ftpm-support/).
+
+Note: TPM 2.0 alternatives that do not follow TCG standards: Microchip's MEC175xB embedded controller provides immutable hardware support with PQC algorithms including ML-DSA, ML-KEM, and LMS. It is not a TCG-compliant discrete TPM and it does not implement the TPM 2.0 commands.
 
 ## PQC status of known TPM 2.0 solutions
 
@@ -41,11 +43,18 @@ wolfSSL's firmware TPM is available now for teams that need to develop and test 
 | Infineon Optiga SLB 9672 | v1.59 | No | Yes — XMSS | Available |
 | Infineon Optiga SLB 9673 | v1.59 | No | Yes — XMSS | Available |
 | STMicroelectronics ST33K | v1.59 | No | Yes — LMS | Available |
-| Nuvoton NPCT 760 | v1.59 | No | No | Available | EAL4+. |
+| Nuvoton NPCT 760 | v1.59 | No | No | Available |
 
-Side-note — firmware update algorithm choice: Infineon uses XMSS, ST uses LMS. Both are stateful hash-based signatures standardized under SP800-208. Different parameter choices, same security concept.
+Note: firmware update algorithm choice: Infineon uses XMSS, ST uses LMS. Both are stateful hash-based signatures standardized under SP800-208. Different parameter choices, same security concept.
 
-Side-note — TPM 2.0 alternatives that do not follow TCG standards: Microchip's MEC175xB embedded controller provides immutable hardware support with PQC algorithms including ML-DSA, ML-KEM, and LMS. It is not a TCG-compliant discrete TPM and it does not implement the TPM 2.0 commands.
+### Pin-to-pin compatiblity for PQC TPM now confirmed
+
+| Vendor | PQC TPM | Pin-to-pin | Current gen TPM 2.0 |
+|---|---|---|---|
+| STMicro |ST33KTPMXQ | Yes | ST33KTPM |
+| Infineon | OPTIGA TPM with PQC | Yes | SLB 9672/9673 |
+| Nuvoton | NPCT TPM with PQC | Yes | NPCT 76x|
+| SEALSQ | QVault TPM with PQC | Not applicable  | No prior versions
 
 ## New algorithms in v1.85
 
