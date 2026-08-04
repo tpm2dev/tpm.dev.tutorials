@@ -30,8 +30,8 @@ Note: TPM 2.0 alternatives that do not follow TCG standards: Microchip's MEC175x
 |---|---|---|---|---|---|
 | SEALSQ QVault TPM | v1.85 | Yes | Yes | 🚀 Samples | Supports ML-DSA-87 and ML-KEM-1024 for TPM operations.  |
 | STMicro ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K. |
+| Nuvoton NPCT8xx | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with NPCT76x/NPCT75x. |
 | Infineon OPTIGA TPM with PQC | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with SLB 9672/9673. |
-| Nuvoton NPCT TPM with PQC | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with NPCT 76x TPMs. |
 | wolfTPM firmware TPM | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
 
 ### Current Generation TPM 2.0
@@ -43,7 +43,7 @@ Note: TPM 2.0 alternatives that do not follow TCG standards: Microchip's MEC175x
 | Infineon Optiga SLB 9672 | v1.59 | No | Yes — XMSS | Available |
 | Infineon Optiga SLB 9673 | v1.59 | No | Yes — XMSS | Available |
 | STMicroelectronics ST33K | v1.59 | No | Yes — LMS | Available |
-| Nuvoton NPCT 760 | v1.59 | No | No | Available |
+| Nuvoton NPCT 76x/75x | v1.59 | No | No | Available |
 
 Note: firmware update algorithm choice: Infineon uses XMSS, ST uses LMS. Both are stateful hash-based signatures standardized under SP800-208. Different parameter choices, same security concept.
 
@@ -52,9 +52,9 @@ Note: firmware update algorithm choice: Infineon uses XMSS, ST uses LMS. Both ar
 | Vendor | PQC TPM | Pin-to-pin | Current gen TPM 2.0 |
 |---|---|---|---|
 | STMicro |ST33KTPMXQ | Yes | ST33KTPM |
+| Nuvoton | NPCT8xx | Yes | NPCT76x/NPCT75x |
 | Infineon | OPTIGA TPM with PQC | Yes | SLB 9672/9673 |
-| Nuvoton | NPCT TPM with PQC | Yes | NPCT 76x|
-| SEALSQ | QVault TPM with PQC | Not applicable  | No prior versions
+| SEALSQ | QVault TPM with PQC | Not applicable  | No prior versions |
 
 ## New algorithms in v1.85
 
