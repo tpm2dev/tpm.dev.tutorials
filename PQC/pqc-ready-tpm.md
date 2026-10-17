@@ -1,10 +1,10 @@
 # TPM 2.0 PQC Status as of June 2026
 
-Last change: 3.August.2026
+Last change: 17.October.2026
 
 ## Where things stand today ("Too Long Didn't Read")
 
-1. No discrete hardware TPM ships with PQC capabilities yet. See table with [PQC status](#pqc-status-of-known-tpm-20-solutions).
+1. No mass production of hardware TPM chips with PQC capabilities yet. See table with [PQC status](#pqc-status-of-known-tpm-20-solutions).
 
     ```TPM developers and system integrators have no PQC-capable discrete silicon to build against today.```
 
@@ -14,25 +14,31 @@ Last change: 3.August.2026
 
 3. What is available today:
 
-    Infineon's current generation SLB 9672 / SLB 9673 has PQC protection over *the TPM update channel*: XMSS signatures mean a firmware push to the chip cannot be corrupted by a quantum attacker. That is sound engineering. But the PQC boundary stops at the chip itself. Your application, your attestation flow, your key exchange still run on classical algorithms. Similar is the situation with STMicroelectronics ST33K discrete TPM 2.0 solution.
+    Hardware samples are available for the new `Infineon OPTIGA TPM SLB 9678 with PQC`, Nuvoton NPCT8xx, SEALSQ QVault TPM and ST33KTPM-XQ.
 
-The nearest point on the horizon **based on public information** is SEALSQ, with  [engineering samples targeted for Q3 2026](https://www.sealsq.com/investors/news-releases/sealsq-announces-comprehensive-2026-certification-roadmap-for-qs7001-secure-element-and-qvault-tpm-product-lines).
+Note on current generation TPM 2.0 chips:
 
-wolfSSL's firmware TPM is available now for teams that need to develop and test against the v1.85 API before production silicon arrives. wolfTPM is licensed under GPLv2 so it can be used for devleopment but shipping firmware TPM into products requires a commercial license from [wolfSSL](https://www.wolfssl.com/announcing-wolftpm-firmware-tpm-ftpm-support/).
+    Mass available is Infineon's current generation SLB 9672 / SLB 9673 has PQC protection over *the TPM update channel*: XMSS signatures mean a firmware push to the chip cannot be corrupted by a quantum attacker. That is sound engineering. But the PQC boundary stops at the chip itself. Your application, your attestation flow, your key exchange still run on classical algorithms. Similar is the situation with the current generation STMicroelectronics ST33K discrete TPM 2.0 solution.
 
-Note: TPM 2.0 alternatives that do not follow TCG standards: Microchip's MEC175xB embedded controller provides immutable hardware support with PQC algorithms including ML-DSA, ML-KEM, and LMS. It is not a TCG-compliant discrete TPM and it does not implement the TPM 2.0 commands.
+Alternative TPM 2.0 solutions:
+
+    The readily available wolfSSL's firmware TPM helps teams who need to develop and test against the v1.85 PQC API before production silicon arrives. wolfTPM can be used as firmware TPM direclty on the board. wolfTPM is licensed under GPLv2 so it can be used for devleopment but shipping firmware TPM into products requires a commercial license from [wolfSSL](https://www.wolfssl.com/announcing-wolftpm-firmware-tpm-ftpm-support/).
+
+TPM 2.0 alternatives that do not follow TCG standards:
+
+    Microchip's MEC175xB embedded controller provides immutable hardware support with PQC algorithms including ML-DSA, ML-KEM, and LMS. It is not a TCG-compliant discrete TPM and it does not implement the TPM 2.0 commands.
 
 ## PQC status of known TPM 2.0 solutions
 
 ### New Generation PQC TPM
 
-| Vendor / Product | TCG spec | PQC in TPM ops | PQC FW updates | Status | Notes |
-|---|---|---|---|---|---|
-| SEALSQ QVault TPM | v1.85 | Yes | Yes | 🚀 Samples | Supports ML-DSA-87 and ML-KEM-1024 for TPM operations.  |
-| STMicro ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K. |
-| Nuvoton NPCT8xx | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with NPCT76x/NPCT75x. |
-| Infineon OPTIGA TPM with PQC | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with SLB 9672/9673. |
-| wolfTPM firmware TPM | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
+| Vendor | Product | TCG spec | PQC in TPM ops | PQC FW updates | Status | Notes |
+|---|---|---|---|---|---|---|
+| Infineon | OPTIGA 9678 | v1.85 | Yes | Yes | 🚀 Samples | Pin-to-pin compatible with SLB 9672 & 9673. |
+| Nuvoton | NPCT8xx | v1.85 | Yes | Yes | 🚀 Samples | Pin-to-pin compatible with NPCT76x & NPCT75x. |
+| SEALSQ | QVault | v1.85 | Yes | Yes | 🚀 Samples | No previous generation exists, first product. |
+| STMicro | ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K. |
+| WolfSSL | wolfTPM | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
 
 ### Current Generation TPM 2.0
 
