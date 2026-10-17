@@ -32,13 +32,13 @@ TPM 2.0 alternatives that do not follow TCG standards:
 
 ### New Generation PQC TPM
 
-| Vendor / Product | TCG spec | PQC in TPM ops | PQC FW updates | Status | Notes |
-|---|---|---|---|---|---|
-| Infineon OPTIGA 9678 | v1.85 | Yes | Yes | 🚀 Samples | Pin-to-pin compatible with SLB 9672 & 9673. |
-| Nuvoton NPCT8xx | v1.85 | Yes | Yes | 🚀 Samples | Pin-to-pin compatible with NPCT76x & NPCT75x. |
-| SEALSQ QVault TPM | v1.85 | Yes | Yes | 🚀 Samples | No previous generation exists, first product. |
-| STMicro ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K. |
-| wolfTPM firmware TPM | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
+| Vendor | Product | TCG spec | PQC in TPM ops | PQC FW updates | Status | Notes |
+|---|---|---|---|---|---|---|
+| Infineon | OPTIGA 9678 | v1.85 | Yes | Yes | 🚀 Samples | Pin-to-pin compatible with SLB 9672 & 9673. |
+| Nuvoton | NPCT8xx | v1.85 | Yes | Yes | 🚀 Samples | Pin-to-pin compatible with NPCT76x & NPCT75x. |
+| SEALSQ | QVault | v1.85 | Yes | Yes | 🚀 Samples | No previous generation exists, first product. |
+| STMicro | ST33KTPMXQ | v1.85 | Yes | Yes | Upcomming | Pin-to-pin compatible with previous ST33K. |
+| WolfSSL | wolfTPM | v1.85 | Yes | Not Applicable | ✅ Available | Firmware TPM, not discrete silicon. Built on wolfCrypt FIPS. |
 
 ### Current Generation TPM 2.0
 
