@@ -1,4 +1,4 @@
-# TPM 2.0 PQC Status as of June 2026
+# TPM 2.0 PQC Readiness
 
 Last change: 17.October.2026
 
